@@ -4,6 +4,69 @@ window.app = Vue.createApp({
   delimiters: ['${', '}'],
   data: function () {
     return {
+      // DCA Admin Data
+      dcaClients: [],
+      deposits: [],
+      totalDcaBalance: 0,
+      
+      // Table configurations
+      clientsTable: {
+        columns: [
+          {name: 'user_id', align: 'left', label: 'User ID', field: 'user_id'},
+          {name: 'wallet_id', align: 'left', label: 'Wallet ID', field: 'wallet_id'},
+          {name: 'dca_mode', align: 'left', label: 'DCA Mode', field: 'dca_mode'},
+          {name: 'fixed_mode_daily_limit', align: 'left', label: 'Daily Limit', field: 'fixed_mode_daily_limit'},
+          {name: 'status', align: 'left', label: 'Status', field: 'status'}
+        ],
+        pagination: {
+          rowsPerPage: 10
+        }
+      },
+      depositsTable: {
+        columns: [
+          {name: 'client_id', align: 'left', label: 'Client', field: 'client_id'},
+          {name: 'amount', align: 'left', label: 'Amount', field: 'amount'},
+          {name: 'currency', align: 'left', label: 'Currency', field: 'currency'},
+          {name: 'status', align: 'left', label: 'Status', field: 'status'},
+          {name: 'created_at', align: 'left', label: 'Created', field: 'created_at'},
+          {name: 'notes', align: 'left', label: 'Notes', field: 'notes'}
+        ],
+        pagination: {
+          rowsPerPage: 10
+        }
+      },
+      
+      // Dialog states
+      clientFormDialog: {
+        show: false,
+        data: {
+          dca_mode: 'flow',
+          currency: 'GTQ'
+        }
+      },
+      depositFormDialog: {
+        show: false,
+        data: {
+          currency: 'GTQ'
+        }
+      },
+      clientDetailsDialog: {
+        show: false,
+        data: null,
+        balance: null
+      },
+      
+      // Options
+      dcaModeOptions: [
+        {label: 'Flow Mode', value: 'flow'},
+        {label: 'Fixed Mode', value: 'fixed'}
+      ],
+      currencyOptions: [
+        {label: 'GTQ', value: 'GTQ'},
+        {label: 'USD', value: 'USD'}
+      ],
+      
+      // Legacy data (keep for backward compatibility)
       invoiceAmount: 10,
       qrValue: 'lnurlpay',
       myex: [],
@@ -11,18 +74,8 @@ window.app = Vue.createApp({
         columns: [
           {name: 'id', align: 'left', label: 'ID', field: 'id'},
           {name: 'name', align: 'left', label: 'Name', field: 'name'},
-          {
-            name: 'wallet',
-            align: 'left',
-            label: 'Wallet',
-            field: 'wallet'
-          },
-          {
-            name: 'total',
-            align: 'left',
-            label: 'Total sent/received',
-            field: 'total'
-          }
+          {name: 'wallet', align: 'left', label: 'Wallet', field: 'wallet'},
+          {name: 'total', align: 'left', label: 'Total sent/received', field: 'total'}
         ],
         pagination: {
           rowsPerPage: 10
@@ -45,6 +98,217 @@ window.app = Vue.createApp({
   ///////////////////////////////////////////////////
 
   methods: {
+    // Utility Methods
+    formatCurrency(amount) {
+      if (!amount) return 'Q 0.00'
+      return `Q ${(amount / 100).toFixed(2)}`
+    },
+    
+    formatDate(dateString) {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleDateString()
+    },
+    
+    // DCA Client Methods
+    async getDcaClients() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/myextension/api/v1/dca/clients',
+          this.g.user.wallets[0].inkey
+        )
+        this.dcaClients = data
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+    
+    async sendClientData() {
+      try {
+        const data = {
+          user_id: this.clientFormDialog.data.user_id,
+          wallet_id: this.clientFormDialog.data.wallet_id,
+          dca_mode: this.clientFormDialog.data.dca_mode,
+          fixed_mode_daily_limit: this.clientFormDialog.data.fixed_mode_daily_limit
+        }
+        
+        if (this.clientFormDialog.data.id) {
+          // Update existing client
+          const {data: updatedClient} = await LNbits.api.request(
+            'PUT',
+            `/myextension/api/v1/dca/clients/${this.clientFormDialog.data.id}`,
+            this.g.user.wallets[0].adminkey,
+            data
+          )
+          // Update client in array
+          const index = this.dcaClients.findIndex(c => c.id === updatedClient.id)
+          if (index !== -1) {
+            this.dcaClients.splice(index, 1, updatedClient)
+          }
+        } else {
+          // Create new client
+          const {data: newClient} = await LNbits.api.request(
+            'POST',
+            '/myextension/api/v1/dca/clients',
+            this.g.user.wallets[0].adminkey,
+            data
+          )
+          this.dcaClients.push(newClient)
+        }
+        
+        this.closeClientFormDialog()
+        this.$q.notify({
+          type: 'positive',
+          message: this.clientFormDialog.data.id ? 'Client updated successfully' : 'Client created successfully',
+          timeout: 5000
+        })
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+    
+    closeClientFormDialog() {
+      this.clientFormDialog.show = false
+      this.clientFormDialog.data = {
+        dca_mode: 'flow',
+        currency: 'GTQ'
+      }
+    },
+    
+    editClient(client) {
+      this.clientFormDialog.data = {...client}
+      this.clientFormDialog.show = true
+    },
+    
+    async viewClientDetails(client) {
+      try {
+        const {data: balance} = await LNbits.api.request(
+          'GET',
+          `/myextension/api/v1/dca/clients/${client.id}/balance`,
+          this.g.user.wallets[0].inkey
+        )
+        this.clientDetailsDialog.data = client
+        this.clientDetailsDialog.balance = balance
+        this.clientDetailsDialog.show = true
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+    
+    // Deposit Methods
+    async getDeposits() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/myextension/api/v1/dca/deposits',
+          this.g.user.wallets[0].inkey
+        )
+        this.deposits = data
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+    
+    addDepositDialog(client) {
+      this.depositFormDialog.data = {
+        client_id: client.id,
+        client_name: `${client.user_id.substring(0, 8)}...`,
+        currency: 'GTQ'
+      }
+      this.depositFormDialog.show = true
+    },
+    
+    async sendDepositData() {
+      try {
+        const data = {
+          client_id: this.depositFormDialog.data.client_id,
+          amount: this.depositFormDialog.data.amount,
+          currency: this.depositFormDialog.data.currency,
+          notes: this.depositFormDialog.data.notes
+        }
+        
+        if (this.depositFormDialog.data.id) {
+          // Update existing deposit (mainly for notes/status)
+          const {data: updatedDeposit} = await LNbits.api.request(
+            'PUT',
+            `/myextension/api/v1/dca/deposits/${this.depositFormDialog.data.id}`,
+            this.g.user.wallets[0].adminkey,
+            {status: this.depositFormDialog.data.status, notes: data.notes}
+          )
+          const index = this.deposits.findIndex(d => d.id === updatedDeposit.id)
+          if (index !== -1) {
+            this.deposits.splice(index, 1, updatedDeposit)
+          }
+        } else {
+          // Create new deposit
+          const {data: newDeposit} = await LNbits.api.request(
+            'POST',
+            '/myextension/api/v1/dca/deposits',
+            this.g.user.wallets[0].adminkey,
+            data
+          )
+          this.deposits.unshift(newDeposit)
+        }
+        
+        this.closeDepositFormDialog()
+        this.$q.notify({
+          type: 'positive',
+          message: this.depositFormDialog.data.id ? 'Deposit updated successfully' : 'Deposit created successfully',
+          timeout: 5000
+        })
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+    
+    closeDepositFormDialog() {
+      this.depositFormDialog.show = false
+      this.depositFormDialog.data = {
+        currency: 'GTQ'
+      }
+    },
+    
+    async confirmDeposit(deposit) {
+      try {
+        await LNbits.utils
+          .confirmDialog('Confirm that this deposit has been physically placed in the ATM machine?')
+          .onOk(async () => {
+            const {data: updatedDeposit} = await LNbits.api.request(
+              'PUT',
+              `/myextension/api/v1/dca/deposits/${deposit.id}/status`,
+              this.g.user.wallets[0].adminkey,
+              {status: 'confirmed', notes: 'Confirmed by admin - money placed in machine'}
+            )
+            const index = this.deposits.findIndex(d => d.id === deposit.id)
+            if (index !== -1) {
+              this.deposits.splice(index, 1, updatedDeposit)
+            }
+            this.$q.notify({
+              type: 'positive',
+              message: 'Deposit confirmed! DCA is now active for this client.',
+              timeout: 5000
+            })
+          })
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+    
+    editDeposit(deposit) {
+      this.depositFormDialog.data = {...deposit}
+      this.depositFormDialog.show = true
+    },
+    
+    // Export Methods
+    async exportClientsCSV() {
+      await LNbits.utils.exportCSV(this.clientsTable.columns, this.dcaClients)
+    },
+    
+    async exportDepositsCSV() {
+      await LNbits.utils.exportCSV(this.depositsTable.columns, this.deposits)
+    },
+    
+    // Legacy Methods (keep for backward compatibility)
     async closeFormDialog() {
       this.formDialog.show = false
       this.formDialog.data = {}
@@ -237,6 +501,30 @@ window.app = Vue.createApp({
   //////LIFECYCLE FUNCTIONS RUNNING ON PAGE LOAD/////
   ///////////////////////////////////////////////////
   async created() {
+    // Load DCA admin data
+    await Promise.all([
+      this.getDcaClients(),
+      this.getDeposits()
+    ])
+    
+    // Calculate total DCA balance
+    this.calculateTotalDcaBalance()
+    
+    // Legacy data loading
     await this.getMyExtensions()
+  },
+  
+  watch: {
+    deposits() {
+      this.calculateTotalDcaBalance()
+    }
+  },
+  
+  computed: {
+    calculateTotalDcaBalance() {
+      this.totalDcaBalance = this.deposits
+        .filter(d => d.status === 'confirmed')
+        .reduce((total, deposit) => total + deposit.amount, 0)
+    }
   }
 })

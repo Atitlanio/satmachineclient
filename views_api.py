@@ -15,9 +15,26 @@ from .crud import (
     get_myextension,
     get_myextensions,
     update_myextension,
+    # DCA CRUD operations
+    create_dca_client,
+    get_dca_clients,
+    get_dca_client,
+    update_dca_client,
+    delete_dca_client,
+    create_deposit,
+    get_all_deposits,
+    get_deposit,
+    update_deposit_status,
+    get_client_balance_summary,
 )
 from .helpers import lnurler
-from .models import CreateMyExtensionData, CreatePayment, MyExtension
+from .models import (
+    CreateMyExtensionData, CreatePayment, MyExtension,
+    # DCA models
+    CreateDcaClientData, DcaClient, UpdateDcaClientData,
+    CreateDepositData, DcaDeposit, UpdateDepositStatusData,
+    ClientBalanceSummary
+)
 
 myextension_api_router = APIRouter()
 
@@ -173,3 +190,153 @@ async def api_myextension_create_invoice(data: CreatePayment) -> dict:
     )
 
     return {"payment_hash": payment.payment_hash, "payment_request": payment.bolt11}
+
+
+###################################################
+################ DCA API ENDPOINTS ################
+###################################################
+
+# DCA Client Endpoints
+
+@myextension_api_router.get("/api/v1/dca/clients")
+async def api_get_dca_clients(
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> list[DcaClient]:
+    """Get all DCA clients"""
+    return await get_dca_clients()
+
+
+@myextension_api_router.get("/api/v1/dca/clients/{client_id}")
+async def api_get_dca_client(
+    client_id: str,
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> DcaClient:
+    """Get a specific DCA client"""
+    client = await get_dca_client(client_id)
+    if not client:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="DCA client not found."
+        )
+    return client
+
+
+@myextension_api_router.post("/api/v1/dca/clients", status_code=HTTPStatus.CREATED)
+async def api_create_dca_client(
+    data: CreateDcaClientData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> DcaClient:
+    """Create a new DCA client"""
+    return await create_dca_client(data)
+
+
+@myextension_api_router.put("/api/v1/dca/clients/{client_id}")
+async def api_update_dca_client(
+    client_id: str,
+    data: UpdateDcaClientData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> DcaClient:
+    """Update a DCA client"""
+    client = await get_dca_client(client_id)
+    if not client:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="DCA client not found."
+        )
+    
+    updated_client = await update_dca_client(client_id, data)
+    if not updated_client:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Failed to update client."
+        )
+    return updated_client
+
+
+@myextension_api_router.delete("/api/v1/dca/clients/{client_id}")
+async def api_delete_dca_client(
+    client_id: str,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    """Delete a DCA client"""
+    client = await get_dca_client(client_id)
+    if not client:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="DCA client not found."
+        )
+    
+    await delete_dca_client(client_id)
+    return {"message": "Client deleted successfully"}
+
+
+@myextension_api_router.get("/api/v1/dca/clients/{client_id}/balance")
+async def api_get_client_balance(
+    client_id: str,
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> ClientBalanceSummary:
+    """Get client balance summary"""
+    client = await get_dca_client(client_id)
+    if not client:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="DCA client not found."
+        )
+    
+    return await get_client_balance_summary(client_id)
+
+
+# DCA Deposit Endpoints
+
+@myextension_api_router.get("/api/v1/dca/deposits")
+async def api_get_deposits(
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> list[DcaDeposit]:
+    """Get all deposits"""
+    return await get_all_deposits()
+
+
+@myextension_api_router.get("/api/v1/dca/deposits/{deposit_id}")
+async def api_get_deposit(
+    deposit_id: str,
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> DcaDeposit:
+    """Get a specific deposit"""
+    deposit = await get_deposit(deposit_id)
+    if not deposit:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Deposit not found."
+        )
+    return deposit
+
+
+@myextension_api_router.post("/api/v1/dca/deposits", status_code=HTTPStatus.CREATED)
+async def api_create_deposit(
+    data: CreateDepositData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> DcaDeposit:
+    """Create a new deposit"""
+    # Verify client exists
+    client = await get_dca_client(data.client_id)
+    if not client:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="DCA client not found."
+        )
+    
+    return await create_deposit(data)
+
+
+@myextension_api_router.put("/api/v1/dca/deposits/{deposit_id}/status")
+async def api_update_deposit_status(
+    deposit_id: str,
+    data: UpdateDepositStatusData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> DcaDeposit:
+    """Update deposit status (e.g., confirm deposit)"""
+    deposit = await get_deposit(deposit_id)
+    if not deposit:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Deposit not found."
+        )
+    
+    updated_deposit = await update_deposit_status(deposit_id, data)
+    if not updated_deposit:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Failed to update deposit."
+        )
+    return updated_deposit

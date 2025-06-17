@@ -1,18 +1,140 @@
 <!--/////////////////////////////////////////////////-->
-<!--//PAGE FOR THE EXTENSIONS BACKEND IN LNBITS//////-->
+<!--//PAGE FOR THE DCA ADMIN EXTENSION IN LNBITS//////-->
 <!--/////////////////////////////////////////////////-->
 
 {% extends "base.html" %} {% from "macros.jinja" import window_vars with context
 %} {% block scripts %} {{ window_vars(user) }}
 <script src="{{ static_url_for('myextension/static', path='js/index.js') }}"></script>
 {% endblock %} {% block page %}
-<div class="row q-col-gutter-md" id="makeItRain">
+<div class="row q-col-gutter-md" id="dcaAdmin">
   <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
+    <!-- Client Management Section -->
     <q-card>
       <q-card-section>
-        <q-btn unelevated color="primary" @click="formDialog.show = true"
-          >New MyExtension</q-btn
+        <div class="row items-center no-wrap q-mb-md">
+          <div class="col">
+            <h5 class="text-subtitle1 q-my-none">DCA Client Management</h5>
+          </div>
+          <div class="col-auto">
+            <q-btn unelevated color="primary" @click="clientFormDialog.show = true">
+              Add New Client
+            </q-btn>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- DCA Clients Table -->
+    <q-card>
+      <q-card-section>
+        <div class="row items-center no-wrap q-mb-md">
+          <div class="col">
+            <h6 class="text-subtitle2 q-my-none">Active DCA Clients</h6>
+          </div>
+          <div class="col-auto">
+            <q-btn flat color="grey" @click="exportClientsCSV">Export to CSV</q-btn>
+          </div>
+        </div>
+        <q-table
+          dense
+          flat
+          :rows="dcaClients"
+          row-key="id"
+          :columns="clientsTable.columns"
+          v-model:pagination="clientsTable.pagination"
         >
+          <template v-slot:body="props">
+            <q-tr :props="props">
+              <q-td v-for="col in props.cols" :key="col.name" :props="props">
+                <div v-if="col.field == 'user_id'">${ col.value.substring(0, 8) }...</div>
+                <div v-else-if="col.field == 'wallet_id'">${ col.value.substring(0, 8) }...</div>
+                <div v-else-if="col.field == 'status'">
+                  <q-badge :color="col.value === 'active' ? 'green' : 'red'">
+                    ${ col.value }
+                  </q-badge>
+                </div>
+                <div v-else>${ col.value }</div>
+              </q-td>
+              <q-td auto-width>
+                <q-btn
+                  flat dense size="sm" icon="account_balance_wallet"
+                  color="primary" class="q-mr-sm"
+                  @click="addDepositDialog(props.row)"
+                >
+                  <q-tooltip>Add Deposit</q-tooltip>
+                </q-btn>
+                <q-btn
+                  flat dense size="sm" icon="visibility"
+                  color="blue" class="q-mr-sm"
+                  @click="viewClientDetails(props.row)"
+                >
+                  <q-tooltip>View Details</q-tooltip>
+                </q-btn>
+                <q-btn
+                  flat dense size="sm" icon="edit"
+                  color="orange" class="q-mr-sm"
+                  @click="editClient(props.row)"
+                >
+                  <q-tooltip>Edit Client</q-tooltip>
+                </q-btn>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+
+    <!-- Deposits Management Section -->
+    <q-card>
+      <q-card-section>
+        <div class="row items-center no-wrap q-mb-md">
+          <div class="col">
+            <h6 class="text-subtitle2 q-my-none">Recent Deposits</h6>
+          </div>
+          <div class="col-auto">
+            <q-btn flat color="grey" @click="exportDepositsCSV">Export to CSV</q-btn>
+          </div>
+        </div>
+        <q-table
+          dense
+          flat
+          :rows="deposits"
+          row-key="id"
+          :columns="depositsTable.columns"
+          v-model:pagination="depositsTable.pagination"
+        >
+          <template v-slot:body="props">
+            <q-tr :props="props">
+              <q-td v-for="col in props.cols" :key="col.name" :props="props">
+                <div v-if="col.field == 'amount'">${ formatCurrency(col.value) }</div>
+                <div v-else-if="col.field == 'status'">
+                  <q-badge :color="col.value === 'confirmed' ? 'green' : 'orange'">
+                    ${ col.value }
+                  </q-badge>
+                </div>
+                <div v-else-if="col.field == 'created_at'">${ formatDate(col.value) }</div>
+                <div v-else>${ col.value }</div>
+              </q-td>
+              <q-td auto-width>
+                <q-btn
+                  v-if="props.row.status === 'pending'"
+                  flat dense size="sm" icon="check_circle"
+                  color="green" class="q-mr-sm"
+                  @click="confirmDeposit(props.row)"
+                >
+                  <q-tooltip>Confirm Deposit</q-tooltip>
+                </q-btn>
+                <q-btn
+                  flat dense size="sm" icon="edit"
+                  color="orange"
+                  @click="editDeposit(props.row)"
+                >
+                  <q-tooltip>Edit Deposit</q-tooltip>
+                </q-btn>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
       </q-card-section>
     </q-card>
 
@@ -109,81 +231,216 @@
     <q-card>
       <q-card-section>
         <h6 class="text-subtitle1 q-my-none">
-          {{SITE_TITLE}} MyExtension extension
+          {{SITE_TITLE}} DCA Admin Extension
         </h6>
         <p>
-          Simple extension you can use as a base for your own extension. <br />
-          Includes very simple LNURL-pay and LNURL-withdraw example.
+          Dollar Cost Averaging administration for Lamassu ATM integration. <br />
+          Manage client deposits and DCA distribution settings.
         </p>
       </q-card-section>
       <q-card-section class="q-pa-none">
         <q-separator></q-separator>
         <q-list>
-          {% include "myextension/_api_docs.html" %}
+          <q-expansion-item
+            group="api"
+            icon="info"
+            label="DCA System Status"
+            :content-inset-level="0.5"
+          >
+            <q-card-section class="text-caption">
+              <div class="row">
+                <div class="col-6">Active Clients:</div>
+                <div class="col-6">${ dcaClients.filter(c => c.status === 'active').length }</div>
+              </div>
+              <div class="row">
+                <div class="col-6">Pending Deposits:</div>
+                <div class="col-6">${ deposits.filter(d => d.status === 'pending').length }</div>
+              </div>
+              <div class="row">
+                <div class="col-6">Total DCA Balance:</div>
+                <div class="col-6">${ formatCurrency(totalDcaBalance) }</div>
+              </div>
+            </q-card-section>
+          </q-expansion-item>
           <q-separator></q-separator>
-          {% include "myextension/_myextension.html" %}
+          {% include "myextension/_api_docs.html" %}
         </q-list>
       </q-card-section>
     </q-card>
   </div>
 
   <!--/////////////////////////////////////////////////-->
-  <!--//////////////FORM DIALOG////////////////////////-->
+  <!--//////////////DCA CLIENT FORM DIALOG//////////////-->
   <!--/////////////////////////////////////////////////-->
 
-  <q-dialog v-model="formDialog.show" position="top" @hide="closeFormDialog">
+  <q-dialog v-model="clientFormDialog.show" position="top" @hide="closeClientFormDialog">
     <q-card class="q-pa-lg q-pt-xl" style="width: 500px">
-      <q-form @submit="sendMyExtensionData" class="q-gutter-md">
+      <q-form @submit="sendClientData" class="q-gutter-md">
         <q-input
           filled
           dense
-          v-model.trim="formDialog.data.name"
-          label="Name"
-          placeholder="Name for your record"
+          v-model.trim="clientFormDialog.data.user_id"
+          label="User ID *"
+          placeholder="LNBits User ID"
         ></q-input>
         <q-select
           filled
           dense
           emit-value
-          v-model="formDialog.data.wallet"
+          v-model="clientFormDialog.data.wallet_id"
           :options="g.user.walletOptions"
-          label="Wallet *"
+          label="DCA Wallet *"
+          hint="Wallet to receive DCA payments"
+        ></q-select>
+        <q-select
+          filled
+          dense
+          emit-value
+          v-model="clientFormDialog.data.dca_mode"
+          :options="dcaModeOptions"
+          label="DCA Mode *"
         ></q-select>
         <q-input
+          v-if="clientFormDialog.data.dca_mode === 'fixed'"
           filled
           dense
           type="number"
-          v-model.trim="formDialog.data.lnurlwithdrawamount"
-          label="LNURL-withdraw amount"
-        ></q-input>
-        <q-input
-          filled
-          dense
-          type="number"
-          v-model.trim="formDialog.data.lnurlpayamount"
-          label="LNURL-pay amount"
+          v-model.number="clientFormDialog.data.fixed_mode_daily_limit"
+          label="Daily Limit (GTQ)"
+          placeholder="Maximum daily DCA amount"
         ></q-input>
         <div class="row q-mt-lg">
           <q-btn
-            v-if="formDialog.data.id"
+            v-if="clientFormDialog.data.id"
             unelevated
             color="primary"
             type="submit"
-            >Update MyExtension</q-btn
+            >Update Client</q-btn
           >
           <q-btn
             v-else
             unelevated
             color="primary"
-            :disable="formDialog.data.name == null || formDialog.data.wallet == null || formDialog.data.lnurlwithdrawamount == null || formDialog.data.lnurlpayamount == null"
+            :disable="!clientFormDialog.data.user_id || !clientFormDialog.data.wallet_id"
             type="submit"
-            >Create MyExtension</q-btn
+            >Create Client</q-btn
           >
           <q-btn v-close-popup flat color="grey" class="q-ml-auto"
             >Cancel</q-btn
           >
         </div>
       </q-form>
+    </q-card>
+  </q-dialog>
+
+  <!--/////////////////////////////////////////////////-->
+  <!--//////////////DEPOSIT FORM DIALOG////////////////-->
+  <!--/////////////////////////////////////////////////-->
+
+  <q-dialog v-model="depositFormDialog.show" position="top" @hide="closeDepositFormDialog">
+    <q-card class="q-pa-lg q-pt-xl" style="width: 500px">
+      <q-form @submit="sendDepositData" class="q-gutter-md">
+        <div v-if="depositFormDialog.data.client_name" class="text-h6 q-mb-md">
+          Deposit for: ${ depositFormDialog.data.client_name }
+        </div>
+        <q-input
+          filled
+          dense
+          type="number"
+          v-model.number="depositFormDialog.data.amount"
+          label="Deposit Amount (GTQ) *"
+          placeholder="Amount in centavos (GTQ * 100)"
+          hint="Enter amount in centavos (1 GTQ = 100 centavos)"
+        ></q-input>
+        <q-select
+          filled
+          dense
+          emit-value
+          v-model="depositFormDialog.data.currency"
+          :options="currencyOptions"
+          label="Currency"
+        ></q-select>
+        <q-input
+          filled
+          dense
+          type="textarea"
+          v-model.trim="depositFormDialog.data.notes"
+          label="Notes"
+          placeholder="Optional notes about this deposit"
+          rows="3"
+        ></q-input>
+        <div class="row q-mt-lg">
+          <q-btn
+            v-if="depositFormDialog.data.id"
+            unelevated
+            color="primary"
+            type="submit"
+            >Update Deposit</q-btn
+          >
+          <q-btn
+            v-else
+            unelevated
+            color="primary"
+            :disable="!depositFormDialog.data.amount"
+            type="submit"
+            >Create Deposit</q-btn
+          >
+          <q-btn v-close-popup flat color="grey" class="q-ml-auto"
+            >Cancel</q-btn
+          >
+        </div>
+      </q-form>
+    </q-card>
+  </q-dialog>
+
+  <!--/////////////////////////////////////////////////-->
+  <!--//////////////CLIENT DETAILS DIALOG//////////////-->
+  <!--/////////////////////////////////////////////////-->
+
+  <q-dialog v-model="clientDetailsDialog.show" position="top">
+    <q-card class="q-pa-lg" style="width: 600px; max-width: 90vw">
+      <div class="text-h6 q-mb-md">Client Details</div>
+      <div v-if="clientDetailsDialog.data">
+        <q-list>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>User ID</q-item-label>
+              <q-item-label>${ clientDetailsDialog.data.user_id }</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Wallet ID</q-item-label>
+              <q-item-label>${ clientDetailsDialog.data.wallet_id }</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>DCA Mode</q-item-label>
+              <q-item-label>${ clientDetailsDialog.data.dca_mode }</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item v-if="clientDetailsDialog.data.fixed_mode_daily_limit">
+            <q-item-section>
+              <q-item-label caption>Daily Limit</q-item-label>
+              <q-item-label>${ formatCurrency(clientDetailsDialog.data.fixed_mode_daily_limit) }</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Balance Summary</q-item-label>
+              <q-item-label v-if="clientDetailsDialog.balance">
+                Deposits: ${ formatCurrency(clientDetailsDialog.balance.total_deposits) } | 
+                Payments: ${ formatCurrency(clientDetailsDialog.balance.total_payments) } | 
+                Remaining: ${ formatCurrency(clientDetailsDialog.balance.remaining_balance) }
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </div>
+      <div class="row q-mt-lg">
+        <q-btn v-close-popup flat color="grey" class="q-ml-auto">Close</q-btn>
+      </div>
     </q-card>
   </q-dialog>
 

@@ -220,50 +220,8 @@ async def api_get_dca_client(
     return client
 
 
-@myextension_api_router.post("/api/v1/dca/clients", status_code=HTTPStatus.CREATED)
-async def api_create_dca_client(
-    data: CreateDcaClientData,
-    wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> DcaClient:
-    """Create a new DCA client"""
-    return await create_dca_client(data)
-
-
-@myextension_api_router.put("/api/v1/dca/clients/{client_id}")
-async def api_update_dca_client(
-    client_id: str,
-    data: UpdateDcaClientData,
-    wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> DcaClient:
-    """Update a DCA client"""
-    client = await get_dca_client(client_id)
-    if not client:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="DCA client not found."
-        )
-    
-    updated_client = await update_dca_client(client_id, data)
-    if not updated_client:
-        raise HTTPException(
-            status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Failed to update client."
-        )
-    return updated_client
-
-
-@myextension_api_router.delete("/api/v1/dca/clients/{client_id}")
-async def api_delete_dca_client(
-    client_id: str,
-    wallet: WalletTypeInfo = Depends(require_admin_key),
-):
-    """Delete a DCA client"""
-    client = await get_dca_client(client_id)
-    if not client:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="DCA client not found."
-        )
-    
-    await delete_dca_client(client_id)
-    return {"message": "Client deleted successfully"}
+# Note: Client creation/update/delete will be handled by the DCA client extension
+# Admin extension only reads existing clients and manages their deposits
 
 
 @myextension_api_router.get("/api/v1/dca/clients/{client_id}/balance")

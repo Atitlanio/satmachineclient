@@ -8,17 +8,13 @@
 {% endblock %} {% block page %}
 <div class="row q-col-gutter-md" id="dcaAdmin">
   <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
-    <!-- Client Management Section -->
+    <!-- Deposit Management Section -->
     <q-card>
       <q-card-section>
         <div class="row items-center no-wrap q-mb-md">
           <div class="col">
-            <h5 class="text-subtitle1 q-my-none">DCA Client Management</h5>
-          </div>
-          <div class="col-auto">
-            <q-btn unelevated color="primary" @click="clientFormDialog.show = true">
-              Add New Client
-            </q-btn>
+            <h5 class="text-subtitle1 q-my-none">DCA Deposit Management</h5>
+            <p class="text-caption q-my-none">Manage fiat deposits for existing DCA clients</p>
           </div>
         </div>
       </q-card-section>
@@ -29,7 +25,8 @@
       <q-card-section>
         <div class="row items-center no-wrap q-mb-md">
           <div class="col">
-            <h6 class="text-subtitle2 q-my-none">Active DCA Clients</h6>
+            <h6 class="text-subtitle2 q-my-none">Registered DCA Clients</h6>
+            <p class="text-caption q-my-none">Clients registered via the DCA client extension</p>
           </div>
           <div class="col-auto">
             <q-btn flat color="grey" @click="exportClientsCSV">Export to CSV</q-btn>
@@ -53,7 +50,10 @@
                     ${ col.value }
                   </q-badge>
                 </div>
-                <div v-else>${ col.value }</div>
+                <div v-else-if="col.field == 'fixed_mode_daily_limit' && col.value">
+                  ${ formatCurrency(col.value) }
+                </div>
+                <div v-else>${ col.value || '-' }</div>
               </q-td>
               <q-td auto-width>
                 <q-btn
@@ -65,17 +65,10 @@
                 </q-btn>
                 <q-btn
                   flat dense size="sm" icon="visibility"
-                  color="blue" class="q-mr-sm"
+                  color="blue"
                   @click="viewClientDetails(props.row)"
                 >
-                  <q-tooltip>View Details</q-tooltip>
-                </q-btn>
-                <q-btn
-                  flat dense size="sm" icon="edit"
-                  color="orange" class="q-mr-sm"
-                  @click="editClient(props.row)"
-                >
-                  <q-tooltip>Edit Client</q-tooltip>
+                  <q-tooltip>View Balance & Details</q-tooltip>
                 </q-btn>
               </q-td>
             </q-tr>
@@ -270,68 +263,64 @@
   </div>
 
   <!--/////////////////////////////////////////////////-->
-  <!--//////////////DCA CLIENT FORM DIALOG//////////////-->
+  <!--//////////////QUICK ADD DEPOSIT SECTION//////////-->
   <!--/////////////////////////////////////////////////-->
 
-  <q-dialog v-model="clientFormDialog.show" position="top" @hide="closeClientFormDialog">
-    <q-card class="q-pa-lg q-pt-xl" style="width: 500px">
-      <q-form @submit="sendClientData" class="q-gutter-md">
-        <q-input
-          filled
-          dense
-          v-model.trim="clientFormDialog.data.user_id"
-          label="User ID *"
-          placeholder="LNBits User ID"
-        ></q-input>
-        <q-select
-          filled
-          dense
-          emit-value
-          v-model="clientFormDialog.data.wallet_id"
-          :options="g.user.walletOptions"
-          label="DCA Wallet *"
-          hint="Wallet to receive DCA payments"
-        ></q-select>
-        <q-select
-          filled
-          dense
-          emit-value
-          v-model="clientFormDialog.data.dca_mode"
-          :options="dcaModeOptions"
-          label="DCA Mode *"
-        ></q-select>
-        <q-input
-          v-if="clientFormDialog.data.dca_mode === 'fixed'"
-          filled
-          dense
-          type="number"
-          v-model.number="clientFormDialog.data.fixed_mode_daily_limit"
-          label="Daily Limit (GTQ)"
-          placeholder="Maximum daily DCA amount"
-        ></q-input>
-        <div class="row q-mt-lg">
-          <q-btn
-            v-if="clientFormDialog.data.id"
-            unelevated
-            color="primary"
-            type="submit"
-            >Update Client</q-btn
-          >
-          <q-btn
-            v-else
-            unelevated
-            color="primary"
-            :disable="!clientFormDialog.data.user_id || !clientFormDialog.data.wallet_id"
-            type="submit"
-            >Create Client</q-btn
-          >
-          <q-btn v-close-popup flat color="grey" class="q-ml-auto"
-            >Cancel</q-btn
-          >
+  <q-card v-if="dcaClients.length > 0">
+    <q-card-section>
+      <h6 class="text-subtitle2 q-my-none">Quick Add Deposit</h6>
+      <p class="text-caption q-my-none">Add a new deposit for an existing client</p>
+      <q-form @submit="sendQuickDeposit" class="q-gutter-md q-mt-md">
+        <div class="row q-gutter-md">
+          <div class="col">
+            <q-select
+              filled
+              dense
+              emit-value
+              v-model="quickDepositForm.client_id"
+              :options="clientOptions"
+              label="Select Client *"
+              option-label="label"
+              option-value="value"
+            ></q-select>
+          </div>
+          <div class="col">
+            <q-input
+              filled
+              dense
+              type="number"
+              v-model.number="quickDepositForm.amount"
+              label="Amount (GTQ) *"
+              placeholder="Amount in centavos (GTQ * 100)"
+              hint="Enter amount in centavos"
+            ></q-input>
+          </div>
+          <div class="col-auto">
+            <q-btn
+              unelevated
+              color="primary"
+              type="submit"
+              :disable="!quickDepositForm.client_id || !quickDepositForm.amount"
+              >Add Deposit</q-btn
+            >
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <q-input
+              filled
+              dense
+              type="textarea"
+              v-model.trim="quickDepositForm.notes"
+              label="Notes (Optional)"
+              placeholder="Optional notes about this deposit"
+              rows="2"
+            ></q-input>
+          </div>
         </div>
       </q-form>
-    </q-card>
-  </q-dialog>
+    </q-card-section>
+  </q-card>
 
   <!--/////////////////////////////////////////////////-->
   <!--//////////////DEPOSIT FORM DIALOG////////////////-->

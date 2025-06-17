@@ -49,7 +49,7 @@ async def m003_create_dca_clients(db):
             created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
             updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );
-    """
+        """
     )
 
 
@@ -67,10 +67,9 @@ async def m004_create_dca_deposits(db):
             status TEXT NOT NULL DEFAULT 'pending',
             notes TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
-            confirmed_at TIMESTAMP,
-            FOREIGN KEY (client_id) REFERENCES myextension.dca_clients(id)
+            confirmed_at TIMESTAMP
         );
-    """
+        """
     )
 
 
@@ -90,8 +89,7 @@ async def m005_create_dca_payments(db):
             lamassu_transaction_id TEXT,
             payment_hash TEXT,
             status TEXT NOT NULL DEFAULT 'pending',
-            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
-            FOREIGN KEY (client_id) REFERENCES myextension.dca_clients(id)
+            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );
-    """
+        """
     )

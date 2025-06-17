@@ -1,10 +1,105 @@
 # Description: Pydantic data models dictate what is passed between frontend and backend.
 
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
 
 
+# DCA Client Models
+class CreateDcaClientData(BaseModel):
+    user_id: str
+    wallet_id: str
+    dca_mode: str = "flow"  # 'flow' or 'fixed'
+    fixed_mode_daily_limit: Optional[int] = None
+
+
+class DcaClient(BaseModel):
+    id: str
+    user_id: str
+    wallet_id: str
+    dca_mode: str
+    fixed_mode_daily_limit: Optional[int]
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class UpdateDcaClientData(BaseModel):
+    dca_mode: Optional[str] = None
+    fixed_mode_daily_limit: Optional[int] = None
+    status: Optional[str] = None
+
+
+# Deposit Models
+class CreateDepositData(BaseModel):
+    client_id: str
+    amount: int  # Amount in smallest currency unit (centavos for GTQ)
+    currency: str = "GTQ"
+    notes: Optional[str] = None
+
+
+class DcaDeposit(BaseModel):
+    id: str
+    client_id: str
+    amount: int
+    currency: str
+    status: str  # 'pending' or 'confirmed'
+    notes: Optional[str]
+    created_at: datetime
+    confirmed_at: Optional[datetime]
+
+
+class UpdateDepositStatusData(BaseModel):
+    status: str
+    notes: Optional[str] = None
+
+
+# Payment Models
+class CreateDcaPaymentData(BaseModel):
+    client_id: str
+    amount_sats: int
+    amount_fiat: int
+    exchange_rate: float
+    transaction_type: str  # 'flow', 'fixed', 'manual', 'commission'
+    lamassu_transaction_id: Optional[str] = None
+    payment_hash: Optional[str] = None
+
+
+class DcaPayment(BaseModel):
+    id: str
+    client_id: str
+    amount_sats: int
+    amount_fiat: int
+    exchange_rate: float
+    transaction_type: str
+    lamassu_transaction_id: Optional[str]
+    payment_hash: Optional[str]
+    status: str  # 'pending', 'confirmed', 'failed'
+    created_at: datetime
+
+
+# Client Balance Summary
+class ClientBalanceSummary(BaseModel):
+    client_id: str
+    total_deposits: int  # Total confirmed deposits
+    total_payments: int  # Total payments made
+    remaining_balance: int  # Available balance for DCA
+    currency: str
+
+
+# Transaction Processing Models
+class LamassuTransaction(BaseModel):
+    transaction_id: str
+    amount_fiat: int
+    amount_crypto: int
+    exchange_rate: float
+    transaction_type: str  # 'cash_in' or 'cash_out'
+    status: str
+    timestamp: datetime
+
+
+# Legacy models (keep for backward compatibility during transition)
 class CreateMyExtensionData(BaseModel):
     id: Optional[str] = ""
     name: str

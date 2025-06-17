@@ -31,3 +31,67 @@ async def m002_add_timestamp(db):
         ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now};
     """
     )
+
+
+async def m003_create_dca_clients(db):
+    """
+    Create DCA clients table.
+    """
+    await db.execute(
+        f"""
+        CREATE TABLE myextension.dca_clients (
+            id TEXT PRIMARY KEY NOT NULL,
+            user_id TEXT NOT NULL,
+            wallet_id TEXT NOT NULL,
+            dca_mode TEXT NOT NULL DEFAULT 'flow',
+            fixed_mode_daily_limit INTEGER,
+            status TEXT NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
+            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
+        );
+    """
+    )
+
+
+async def m004_create_dca_deposits(db):
+    """
+    Create DCA deposits table.
+    """
+    await db.execute(
+        f"""
+        CREATE TABLE myextension.dca_deposits (
+            id TEXT PRIMARY KEY NOT NULL,
+            client_id TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            currency TEXT NOT NULL DEFAULT 'GTQ',
+            status TEXT NOT NULL DEFAULT 'pending',
+            notes TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
+            confirmed_at TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES myextension.dca_clients(id)
+        );
+    """
+    )
+
+
+async def m005_create_dca_payments(db):
+    """
+    Create DCA payments table.
+    """
+    await db.execute(
+        f"""
+        CREATE TABLE myextension.dca_payments (
+            id TEXT PRIMARY KEY NOT NULL,
+            client_id TEXT NOT NULL,
+            amount_sats INTEGER NOT NULL,
+            amount_fiat INTEGER NOT NULL,
+            exchange_rate REAL NOT NULL,
+            transaction_type TEXT NOT NULL,
+            lamassu_transaction_id TEXT,
+            payment_hash TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
+            FOREIGN KEY (client_id) REFERENCES myextension.dca_clients(id)
+        );
+    """
+    )

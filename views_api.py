@@ -223,6 +223,15 @@ async def api_get_dca_client(
 # Note: Client creation/update/delete will be handled by the DCA client extension
 # Admin extension only reads existing clients and manages their deposits
 
+# TEMPORARY: Test client creation endpoint (remove in production)
+@myextension_api_router.post("/api/v1/dca/clients", status_code=HTTPStatus.CREATED)
+async def api_create_test_dca_client(
+    data: CreateDcaClientData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> DcaClient:
+    """Create a test DCA client (temporary for testing)"""
+    return await create_dca_client(data)
+
 
 @myextension_api_router.get("/api/v1/dca/clients/{client_id}/balance")
 async def api_get_client_balance(

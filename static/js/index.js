@@ -8,15 +8,15 @@ window.app = Vue.createApp({
       dcaClients: [],
       deposits: [],
       totalDcaBalance: 0,
-      
+
       // Table configurations
       clientsTable: {
         columns: [
-          {name: 'user_id', align: 'left', label: 'User ID', field: 'user_id'},
-          {name: 'wallet_id', align: 'left', label: 'Wallet ID', field: 'wallet_id'},
-          {name: 'dca_mode', align: 'left', label: 'DCA Mode', field: 'dca_mode'},
-          {name: 'fixed_mode_daily_limit', align: 'left', label: 'Daily Limit', field: 'fixed_mode_daily_limit'},
-          {name: 'status', align: 'left', label: 'Status', field: 'status'}
+          { name: 'user_id', align: 'left', label: 'User ID', field: 'user_id' },
+          { name: 'wallet_id', align: 'left', label: 'Wallet ID', field: 'wallet_id' },
+          { name: 'dca_mode', align: 'left', label: 'DCA Mode', field: 'dca_mode' },
+          { name: 'fixed_mode_daily_limit', align: 'left', label: 'Daily Limit', field: 'fixed_mode_daily_limit' },
+          { name: 'status', align: 'left', label: 'Status', field: 'status' }
         ],
         pagination: {
           rowsPerPage: 10
@@ -24,18 +24,18 @@ window.app = Vue.createApp({
       },
       depositsTable: {
         columns: [
-          {name: 'client_id', align: 'left', label: 'Client', field: 'client_id'},
-          {name: 'amount', align: 'left', label: 'Amount', field: 'amount'},
-          {name: 'currency', align: 'left', label: 'Currency', field: 'currency'},
-          {name: 'status', align: 'left', label: 'Status', field: 'status'},
-          {name: 'created_at', align: 'left', label: 'Created', field: 'created_at'},
-          {name: 'notes', align: 'left', label: 'Notes', field: 'notes'}
+          { name: 'client_id', align: 'left', label: 'Client', field: 'client_id' },
+          { name: 'amount', align: 'left', label: 'Amount', field: 'amount' },
+          { name: 'currency', align: 'left', label: 'Currency', field: 'currency' },
+          { name: 'status', align: 'left', label: 'Status', field: 'status' },
+          { name: 'created_at', align: 'left', label: 'Created', field: 'created_at' },
+          { name: 'notes', align: 'left', label: 'Notes', field: 'notes' }
         ],
         pagination: {
           rowsPerPage: 10
         }
       },
-      
+
       // Dialog states  
       depositFormDialog: {
         show: false,
@@ -48,30 +48,30 @@ window.app = Vue.createApp({
         data: null,
         balance: null
       },
-      
+
       // Quick deposit form
       quickDepositForm: {
         client_id: '',
         amount: null,
         notes: ''
       },
-      
+
       // Options
       currencyOptions: [
-        {label: 'GTQ', value: 'GTQ'},
-        {label: 'USD', value: 'USD'}
+        { label: 'GTQ', value: 'GTQ' },
+        { label: 'USD', value: 'USD' }
       ],
-      
+
       // Legacy data (keep for backward compatibility)
       invoiceAmount: 10,
       qrValue: 'lnurlpay',
       myex: [],
       myexTable: {
         columns: [
-          {name: 'id', align: 'left', label: 'ID', field: 'id'},
-          {name: 'name', align: 'left', label: 'Name', field: 'name'},
-          {name: 'wallet', align: 'left', label: 'Wallet', field: 'wallet'},
-          {name: 'total', align: 'left', label: 'Total sent/received', field: 'total'}
+          { name: 'id', align: 'left', label: 'ID', field: 'id' },
+          { name: 'name', align: 'left', label: 'Name', field: 'name' },
+          { name: 'wallet', align: 'left', label: 'Wallet', field: 'wallet' },
+          { name: 'total', align: 'left', label: 'Total sent/received', field: 'total' }
         ],
         pagination: {
           rowsPerPage: 10
@@ -96,19 +96,23 @@ window.app = Vue.createApp({
   methods: {
     // Utility Methods
     formatCurrency(amount) {
-      if (!amount) return 'Q 0.00'
-      return `Q ${(amount / 100).toFixed(2)}`
+      if (!amount) return 'Q 0.00';
+
+      return new Intl.NumberFormat('es-GT', {
+        style: 'currency',
+        currency: 'GTQ',
+      }).format(amount);
     },
-    
+
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString).toLocaleDateString()
     },
-    
+
     // DCA Client Methods
     async getDcaClients() {
       try {
-        const {data} = await LNbits.api.request(
+        const { data } = await LNbits.api.request(
           'GET',
           '/myextension/api/v1/dca/clients',
           this.g.user.wallets[0].inkey
@@ -118,7 +122,35 @@ window.app = Vue.createApp({
         LNbits.utils.notifyApiError(error)
       }
     },
-    
+
+    // Test Client Creation (temporary for testing)
+    async createTestClient() {
+      try {
+        const testData = {
+          user_id: this.g.user.id,
+          wallet_id: this.g.user.wallets[0].id,
+          dca_mode: 'flow'
+        }
+
+        const { data: newClient } = await LNbits.api.request(
+          'POST',
+          '/myextension/api/v1/dca/clients',
+          this.g.user.wallets[0].adminkey,
+          testData
+        )
+
+        this.dcaClients.push(newClient)
+
+        this.$q.notify({
+          type: 'positive',
+          message: 'Test client created successfully!',
+          timeout: 5000
+        })
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+
     // Quick Deposit Methods
     async sendQuickDeposit() {
       try {
@@ -128,23 +160,23 @@ window.app = Vue.createApp({
           currency: 'GTQ',
           notes: this.quickDepositForm.notes
         }
-        
-        const {data: newDeposit} = await LNbits.api.request(
+
+        const { data: newDeposit } = await LNbits.api.request(
           'POST',
           '/myextension/api/v1/dca/deposits',
           this.g.user.wallets[0].adminkey,
           data
         )
-        
+
         this.deposits.unshift(newDeposit)
-        
+
         // Reset form
         this.quickDepositForm = {
           client_id: '',
           amount: null,
           notes: ''
         }
-        
+
         this.$q.notify({
           type: 'positive',
           message: 'Deposit created successfully',
@@ -154,10 +186,10 @@ window.app = Vue.createApp({
         LNbits.utils.notifyApiError(error)
       }
     },
-    
+
     async viewClientDetails(client) {
       try {
-        const {data: balance} = await LNbits.api.request(
+        const { data: balance } = await LNbits.api.request(
           'GET',
           `/myextension/api/v1/dca/clients/${client.id}/balance`,
           this.g.user.wallets[0].inkey
@@ -169,11 +201,11 @@ window.app = Vue.createApp({
         LNbits.utils.notifyApiError(error)
       }
     },
-    
+
     // Deposit Methods
     async getDeposits() {
       try {
-        const {data} = await LNbits.api.request(
+        const { data } = await LNbits.api.request(
           'GET',
           '/myextension/api/v1/dca/deposits',
           this.g.user.wallets[0].inkey
@@ -183,7 +215,7 @@ window.app = Vue.createApp({
         LNbits.utils.notifyApiError(error)
       }
     },
-    
+
     addDepositDialog(client) {
       this.depositFormDialog.data = {
         client_id: client.id,
@@ -192,7 +224,7 @@ window.app = Vue.createApp({
       }
       this.depositFormDialog.show = true
     },
-    
+
     async sendDepositData() {
       try {
         const data = {
@@ -201,14 +233,14 @@ window.app = Vue.createApp({
           currency: this.depositFormDialog.data.currency,
           notes: this.depositFormDialog.data.notes
         }
-        
+
         if (this.depositFormDialog.data.id) {
           // Update existing deposit (mainly for notes/status)
-          const {data: updatedDeposit} = await LNbits.api.request(
+          const { data: updatedDeposit } = await LNbits.api.request(
             'PUT',
             `/myextension/api/v1/dca/deposits/${this.depositFormDialog.data.id}`,
             this.g.user.wallets[0].adminkey,
-            {status: this.depositFormDialog.data.status, notes: data.notes}
+            { status: this.depositFormDialog.data.status, notes: data.notes }
           )
           const index = this.deposits.findIndex(d => d.id === updatedDeposit.id)
           if (index !== -1) {
@@ -216,7 +248,7 @@ window.app = Vue.createApp({
           }
         } else {
           // Create new deposit
-          const {data: newDeposit} = await LNbits.api.request(
+          const { data: newDeposit } = await LNbits.api.request(
             'POST',
             '/myextension/api/v1/dca/deposits',
             this.g.user.wallets[0].adminkey,
@@ -224,7 +256,7 @@ window.app = Vue.createApp({
           )
           this.deposits.unshift(newDeposit)
         }
-        
+
         this.closeDepositFormDialog()
         this.$q.notify({
           type: 'positive',
@@ -235,24 +267,24 @@ window.app = Vue.createApp({
         LNbits.utils.notifyApiError(error)
       }
     },
-    
+
     closeDepositFormDialog() {
       this.depositFormDialog.show = false
       this.depositFormDialog.data = {
         currency: 'GTQ'
       }
     },
-    
+
     async confirmDeposit(deposit) {
       try {
         await LNbits.utils
           .confirmDialog('Confirm that this deposit has been physically placed in the ATM machine?')
           .onOk(async () => {
-            const {data: updatedDeposit} = await LNbits.api.request(
+            const { data: updatedDeposit } = await LNbits.api.request(
               'PUT',
               `/myextension/api/v1/dca/deposits/${deposit.id}/status`,
               this.g.user.wallets[0].adminkey,
-              {status: 'confirmed', notes: 'Confirmed by admin - money placed in machine'}
+              { status: 'confirmed', notes: 'Confirmed by admin - money placed in machine' }
             )
             const index = this.deposits.findIndex(d => d.id === deposit.id)
             if (index !== -1) {
@@ -268,21 +300,21 @@ window.app = Vue.createApp({
         LNbits.utils.notifyApiError(error)
       }
     },
-    
+
     editDeposit(deposit) {
-      this.depositFormDialog.data = {...deposit}
+      this.depositFormDialog.data = { ...deposit }
       this.depositFormDialog.show = true
     },
-    
+
     // Export Methods
     async exportClientsCSV() {
       await LNbits.utils.exportCSV(this.clientsTable.columns, this.dcaClients)
     },
-    
+
     async exportDepositsCSV() {
       await LNbits.utils.exportCSV(this.depositsTable.columns, this.deposits)
     },
-    
+
     // Legacy Methods (keep for backward compatibility)
     async closeFormDialog() {
       this.formDialog.show = false
@@ -321,7 +353,7 @@ window.app = Vue.createApp({
     },
 
     async updateMyExtensionForm(tempId) {
-      const myextension = _.findWhere(this.myex, {id: tempId})
+      const myextension = _.findWhere(this.myex, { id: tempId })
       this.formDialog.data = {
         ...myextension
       }
@@ -365,7 +397,7 @@ window.app = Vue.createApp({
         })
     },
     async deleteMyExtension(tempId) {
-      var myextension = _.findWhere(this.myex, {id: tempId})
+      var myextension = _.findWhere(this.myex, { id: tempId })
       const wallet = _.findWhere(this.g.user.wallets, {
         id: myextension.wallet
       })
@@ -393,12 +425,12 @@ window.app = Vue.createApp({
       await LNbits.utils.exportCSV(this.myexTable.columns, this.myex)
     },
     async itemsArray(tempId) {
-      const myextension = _.findWhere(this.myex, {id: tempId})
+      const myextension = _.findWhere(this.myex, { id: tempId })
       return [...myextension.itemsMap.values()]
     },
     async openformDialog(id) {
       const [tempId, itemId] = id.split(':')
-      const myextension = _.findWhere(this.myex, {id: tempId})
+      const myextension = _.findWhere(this.myex, { id: tempId })
       if (itemId) {
         const item = myextension.itemsMap.get(id)
         this.formDialog.data = {
@@ -412,7 +444,7 @@ window.app = Vue.createApp({
       this.formDialog.show = true
     },
     async openUrlDialog(tempid) {
-      this.urlDialog.data = _.findWhere(this.myex, {id: tempid})
+      this.urlDialog.data = _.findWhere(this.myex, { id: tempid })
       this.qrValue = this.urlDialog.data.lnurlpay
 
       // Connecting to our websocket fired in tasks.py
@@ -428,8 +460,8 @@ window.app = Vue.createApp({
       ///////////////////////////////////////////////////
       ///Simple call to the api to create an invoice/////
       ///////////////////////////////////////////////////
-      myex = _.findWhere(this.myex, {id: tempid})
-      const wallet = _.findWhere(this.g.user.wallets, {id: myex.wallet})
+      myex = _.findWhere(this.myex, { id: tempid })
+      const wallet = _.findWhere(this.g.user.wallets, { id: myex.wallet })
       const data = {
         myextension_id: tempid,
         amount: this.invoiceAmount,
@@ -481,20 +513,20 @@ window.app = Vue.createApp({
       this.getDcaClients(),
       this.getDeposits()
     ])
-    
+
     // Calculate total DCA balance
     this.calculateTotalDcaBalance()
-    
+
     // Legacy data loading
     await this.getMyExtensions()
   },
-  
+
   watch: {
     deposits() {
       this.calculateTotalDcaBalance()
     }
   },
-  
+
   computed: {
     clientOptions() {
       return this.dcaClients.map(client => ({
@@ -502,7 +534,7 @@ window.app = Vue.createApp({
         value: client.id
       }))
     },
-    
+
     calculateTotalDcaBalance() {
       this.totalDcaBalance = this.deposits
         .filter(d => d.status === 'confirmed')

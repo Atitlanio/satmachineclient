@@ -77,6 +77,82 @@
       </q-card-section>
     </q-card>
 
+    <!-- Quick Add Deposit Section -->
+    <q-card>
+      <q-card-section>
+        <h6 class="text-subtitle2 q-my-none">Quick Add Deposit</h6>
+        <p class="text-caption q-my-none">Add a new deposit for an existing client</p>
+        
+        <div v-if="dcaClients.length === 0" class="q-mt-md">
+          <q-banner class="bg-orange-1 text-orange-9">
+            <template v-slot:avatar>
+              <q-icon name="info" color="orange" />
+            </template>
+            No DCA clients registered yet. Clients must first install and configure the DCA client extension.
+            <template v-slot:action>
+              <q-btn 
+                flat 
+                color="orange" 
+                label="Create Test Client" 
+                @click="createTestClient"
+                size="sm"
+              />
+            </template>
+          </q-banner>
+        </div>
+        
+        <q-form v-else @submit="sendQuickDeposit" class="q-gutter-md q-mt-md">
+          <div class="row q-gutter-md">
+            <div class="col">
+              <q-select
+                filled
+                dense
+                emit-value
+                v-model="quickDepositForm.client_id"
+                :options="clientOptions"
+                label="Select Client *"
+                option-label="label"
+                option-value="value"
+              ></q-select>
+            </div>
+            <div class="col">
+              <q-input
+                filled
+                dense
+                type="number"
+                v-model.number="quickDepositForm.amount"
+                label="Amount (GTQ) *"
+                placeholder="Amount in centavos (GTQ * 100)"
+                hint="Enter amount in centavos"
+              ></q-input>
+            </div>
+            <div class="col-auto">
+              <q-btn
+                unelevated
+                color="primary"
+                type="submit"
+                :disable="!quickDepositForm.client_id || !quickDepositForm.amount"
+                >Add Deposit</q-btn
+              >
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                filled
+                dense
+                type="textarea"
+                v-model.trim="quickDepositForm.notes"
+                label="Notes (Optional)"
+                placeholder="Optional notes about this deposit"
+                rows="2"
+              ></q-input>
+            </div>
+          </div>
+        </q-form>
+      </q-card-section>
+    </q-card>
+
     <!-- Deposits Management Section -->
     <q-card>
       <q-card-section>
@@ -262,65 +338,6 @@
     </q-card>
   </div>
 
-  <!--/////////////////////////////////////////////////-->
-  <!--//////////////QUICK ADD DEPOSIT SECTION//////////-->
-  <!--/////////////////////////////////////////////////-->
-
-  <q-card v-if="dcaClients.length > 0">
-    <q-card-section>
-      <h6 class="text-subtitle2 q-my-none">Quick Add Deposit</h6>
-      <p class="text-caption q-my-none">Add a new deposit for an existing client</p>
-      <q-form @submit="sendQuickDeposit" class="q-gutter-md q-mt-md">
-        <div class="row q-gutter-md">
-          <div class="col">
-            <q-select
-              filled
-              dense
-              emit-value
-              v-model="quickDepositForm.client_id"
-              :options="clientOptions"
-              label="Select Client *"
-              option-label="label"
-              option-value="value"
-            ></q-select>
-          </div>
-          <div class="col">
-            <q-input
-              filled
-              dense
-              type="number"
-              v-model.number="quickDepositForm.amount"
-              label="Amount (GTQ) *"
-              placeholder="Amount in centavos (GTQ * 100)"
-              hint="Enter amount in centavos"
-            ></q-input>
-          </div>
-          <div class="col-auto">
-            <q-btn
-              unelevated
-              color="primary"
-              type="submit"
-              :disable="!quickDepositForm.client_id || !quickDepositForm.amount"
-              >Add Deposit</q-btn
-            >
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              filled
-              dense
-              type="textarea"
-              v-model.trim="quickDepositForm.notes"
-              label="Notes (Optional)"
-              placeholder="Optional notes about this deposit"
-              rows="2"
-            ></q-input>
-          </div>
-        </div>
-      </q-form>
-    </q-card-section>
-  </q-card>
 
   <!--/////////////////////////////////////////////////-->
   <!--//////////////DEPOSIT FORM DIALOG////////////////-->

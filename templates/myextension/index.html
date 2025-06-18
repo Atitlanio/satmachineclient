@@ -43,7 +43,8 @@
           <template v-slot:body="props">
             <q-tr :props="props">
               <q-td v-for="col in props.cols" :key="col.name" :props="props">
-                <div v-if="col.field == 'user_id'">${ col.value.substring(0, 8) }...</div>
+                <div v-if="col.field == 'username'">${ col.value || 'No username' }</div>
+                <div v-else-if="col.field == 'user_id'">${ col.value.substring(0, 8) }...</div>
                 <div v-else-if="col.field == 'wallet_id'">${ col.value.substring(0, 8) }...</div>
                 <div v-else-if="col.field == 'status'">
                   <q-badge :color="col.value === 'active' ? 'green' : 'red'">
@@ -107,8 +108,7 @@
               <q-select
                 filled
                 dense
-                emit-value
-                v-model="quickDepositForm.client_id"
+                v-model="quickDepositForm.selectedClient"
                 :options="clientOptions"
                 label="Select Client *"
                 option-label="label"
@@ -131,7 +131,7 @@
                 unelevated
                 color="primary"
                 type="submit"
-                :disable="!quickDepositForm.client_id || !quickDepositForm.amount"
+                :disable="!quickDepositForm.selectedClient || !quickDepositForm.amount"
                 >Add Deposit</q-btn
               >
             </div>
@@ -462,6 +462,12 @@
       <div class="text-h6 q-mb-md">Client Details</div>
       <div v-if="clientDetailsDialog.data">
         <q-list>
+          <q-item v-if="clientDetailsDialog.data.username">
+            <q-item-section>
+              <q-item-label caption>Username</q-item-label>
+              <q-item-label>${ clientDetailsDialog.data.username }</q-item-label>
+            </q-item-section>
+          </q-item>
           <q-item>
             <q-item-section>
               <q-item-label caption>User ID</q-item-label>

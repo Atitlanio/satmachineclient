@@ -11,6 +11,7 @@ window.app = Vue.createApp({
       // Table configurations
       clientsTable: {
         columns: [
+          { name: 'username', align: 'left', label: 'Username', field: 'username' },
           { name: 'user_id', align: 'left', label: 'User ID', field: 'user_id' },
           { name: 'wallet_id', align: 'left', label: 'Wallet ID', field: 'wallet_id' },
           { name: 'dca_mode', align: 'left', label: 'DCA Mode', field: 'dca_mode' },
@@ -50,7 +51,7 @@ window.app = Vue.createApp({
 
       // Quick deposit form
       quickDepositForm: {
-        client_id: '',
+        selectedClient: null,
         amount: null,
         notes: ''
       },
@@ -230,6 +231,7 @@ window.app = Vue.createApp({
         const testData = {
           user_id: this.g.user.id,
           wallet_id: this.g.user.wallets[0].id,
+          username: this.g.user.username || `user_${this.g.user.id.substring(0, 8)}`,
           dca_mode: 'flow'
         }
 
@@ -256,7 +258,7 @@ window.app = Vue.createApp({
     async sendQuickDeposit() {
       try {
         const data = {
-          client_id: this.quickDepositForm.client_id,
+          client_id: this.quickDepositForm.selectedClient?.value,
           amount: this.quickDepositForm.amount,
           currency: 'GTQ',
           notes: this.quickDepositForm.notes
@@ -273,7 +275,7 @@ window.app = Vue.createApp({
 
         // Reset form
         this.quickDepositForm = {
-          client_id: '',
+          selectedClient: null,
           amount: null,
           notes: ''
         }
@@ -320,7 +322,7 @@ window.app = Vue.createApp({
     addDepositDialog(client) {
       this.depositFormDialog.data = {
         client_id: client.id,
-        client_name: `${client.user_id.substring(0, 8)}...`,
+        client_name: client.username || `${client.user_id.substring(0, 8)}...`,
         currency: 'GTQ'
       }
       this.depositFormDialog.show = true
@@ -712,7 +714,7 @@ window.app = Vue.createApp({
     
     clientOptions() {
       return this.dcaClients.map(client => ({
-        label: `${client.user_id.substring(0, 8)}... (${client.dca_mode})`,
+        label: `${client.username || client.user_id.substring(0, 8) + '...'} (${client.dca_mode})`,
         value: client.id
       }))
     },

@@ -176,3 +176,15 @@ async def m008_add_last_poll_tracking(db):
         ADD COLUMN last_successful_poll TIMESTAMP;
         """
     )
+
+
+async def m009_add_username_to_dca_clients(db):
+    """
+    Add username field to DCA clients table for better user experience.
+    """
+    await db.execute(
+        """
+        ALTER TABLE myextension.dca_clients 
+        ADD COLUMN username TEXT;
+        """
+    )

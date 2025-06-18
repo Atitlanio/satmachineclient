@@ -59,13 +59,14 @@ async def create_dca_client(data: CreateDcaClientData) -> DcaClient:
     await db.execute(
         """
         INSERT INTO myextension.dca_clients 
-        (id, user_id, wallet_id, dca_mode, fixed_mode_daily_limit, status, created_at, updated_at)
-        VALUES (:id, :user_id, :wallet_id, :dca_mode, :fixed_mode_daily_limit, :status, :created_at, :updated_at)
+        (id, user_id, wallet_id, username, dca_mode, fixed_mode_daily_limit, status, created_at, updated_at)
+        VALUES (:id, :user_id, :wallet_id, :username, :dca_mode, :fixed_mode_daily_limit, :status, :created_at, :updated_at)
         """,
         {
             "id": client_id,
             "user_id": data.user_id,
             "wallet_id": data.wallet_id,
+            "username": data.username,
             "dca_mode": data.dca_mode,
             "fixed_mode_daily_limit": data.fixed_mode_daily_limit,
             "status": "active",

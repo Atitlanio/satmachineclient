@@ -10,6 +10,7 @@ from pydantic import BaseModel
 class CreateDcaClientData(BaseModel):
     user_id: str
     wallet_id: str
+    username: str
     dca_mode: str = "flow"  # 'flow' or 'fixed'
     fixed_mode_daily_limit: Optional[int] = None
 
@@ -18,6 +19,7 @@ class DcaClient(BaseModel):
     id: str
     user_id: str
     wallet_id: str
+    username: Optional[str]
     dca_mode: str
     fixed_mode_daily_limit: Optional[int]
     status: str
@@ -26,6 +28,7 @@ class DcaClient(BaseModel):
 
 
 class UpdateDcaClientData(BaseModel):
+    username: Optional[str] = None
     dca_mode: Optional[str] = None
     fixed_mode_daily_limit: Optional[int] = None
     status: Optional[str] = None

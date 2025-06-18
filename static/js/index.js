@@ -7,7 +7,6 @@ window.app = Vue.createApp({
       // DCA Admin Data
       dcaClients: [],
       deposits: [],
-      totalDcaBalance: 0,
 
       // Table configurations
       clientsTable: {
@@ -514,17 +513,8 @@ window.app = Vue.createApp({
       this.getDeposits()
     ])
 
-    // Calculate total DCA balance
-    this.calculateTotalDcaBalance()
-
     // Legacy data loading
     await this.getMyExtensions()
-  },
-
-  watch: {
-    deposits() {
-      this.calculateTotalDcaBalance()
-    }
   },
 
   computed: {
@@ -535,8 +525,8 @@ window.app = Vue.createApp({
       }))
     },
 
-    calculateTotalDcaBalance() {
-      this.totalDcaBalance = this.deposits
+    totalDcaBalance() {
+      return this.deposits
         .filter(d => d.status === 'confirmed')
         .reduce((total, deposit) => total + deposit.amount, 0)
     }

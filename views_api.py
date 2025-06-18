@@ -352,31 +352,27 @@ async def api_manual_poll(
     try:
         from .transaction_processor import transaction_processor
         
-        # Connect to database
-        connection = await transaction_processor.connect_to_lamassu_db()
-        if not connection:
+        # Get database configuration
+        db_config = await transaction_processor.connect_to_lamassu_db()
+        if not db_config:
             raise HTTPException(
                 status_code=HTTPStatus.SERVICE_UNAVAILABLE,
-                detail="Could not connect to Lamassu database"
+                detail="Could not get Lamassu database configuration"
             )
         
-        try:
-            # Fetch and process transactions
-            new_transactions = await transaction_processor.fetch_new_transactions(connection)
-            
-            transactions_processed = 0
-            for transaction in new_transactions:
-                await transaction_processor.process_transaction(transaction)
-                transactions_processed += 1
-            
-            return {
-                "success": True,
-                "transactions_processed": transactions_processed,
-                "message": f"Processed {transactions_processed} new transactions"
-            }
-            
-        finally:
-            await connection.close()
+        # Fetch and process transactions via SSH
+        new_transactions = await transaction_processor.fetch_new_transactions(db_config)
+        
+        transactions_processed = 0
+        for transaction in new_transactions:
+            await transaction_processor.process_transaction(transaction)
+            transactions_processed += 1
+        
+        return {
+            "success": True,
+            "transactions_processed": transactions_processed,
+            "message": f"Processed {transactions_processed} new transactions"
+        }
             
     except Exception as e:
         raise HTTPException(

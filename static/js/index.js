@@ -133,6 +133,13 @@ window.app = Vue.createApp({
       return new Date(dateString).toLocaleDateString()
     },
 
+    formatDateTime(dateString) {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString('en-US', { hour12: false })
+    },
+
+
     // Configuration Methods
     async getLamassuConfig() {
       try {

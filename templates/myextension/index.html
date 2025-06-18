@@ -346,8 +346,8 @@
                   <q-badge v-else-if="lamassuConfig.test_connection_success === false" color="red">Failed</q-badge>
                   <q-badge v-else color="grey">Not tested</q-badge>
                 </p>
-                <p><strong>Last Poll:</strong> ${ lamassuConfig.last_poll_time ? formatDate(lamassuConfig.last_poll_time) : 'Not yet run' }</p>
-                <p><strong>Last Success:</strong> ${ lamassuConfig.last_successful_poll ? formatDate(lamassuConfig.last_successful_poll) : 'Never' }</p>
+                <p><strong>Last Poll:</strong> ${ lamassuConfig.last_poll_time ? formatDateTime(lamassuConfig.last_poll_time) : 'Not yet run' }</p>
+                <p><strong>Last Success:</strong> ${ lamassuConfig.last_successful_poll ? formatDateTime(lamassuConfig.last_successful_poll) : 'Never' }</p>
               </div>
               <div v-else>
                 <p><strong>Status:</strong> <q-badge color="orange">Not configured</q-badge></p>

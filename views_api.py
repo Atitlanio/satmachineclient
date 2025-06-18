@@ -325,26 +325,22 @@ async def api_update_deposit_status(
 async def api_test_database_connection(
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ):
-    """Test connection to Lamassu database"""
+    """Test connection to Lamassu database with detailed reporting"""
     try:
         from .transaction_processor import transaction_processor
         
-        connection = await transaction_processor.connect_to_lamassu_db()
-        if connection:
-            await connection.close()
-            return {
-                "success": True,
-                "message": "Successfully connected to Lamassu database"
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Failed to connect to Lamassu database. Check configuration."
-            }
+        # Use the detailed test method
+        result = await transaction_processor.test_connection_detailed()
+        return result
+        
     except Exception as e:
         return {
             "success": False,
-            "message": f"Database connection error: {str(e)}"
+            "message": f"Test connection error: {str(e)}",
+            "steps": [f"❌ Unexpected error: {str(e)}"],
+            "ssh_tunnel_used": False,
+            "ssh_tunnel_success": False,
+            "database_connection_success": False
         }
 
 

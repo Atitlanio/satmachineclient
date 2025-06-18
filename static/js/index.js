@@ -419,11 +419,36 @@ window.app = Vue.createApp({
           this.g.user.wallets[0].adminkey
         )
         
+        // Show detailed results in a dialog
+        const stepsList = data.steps ? data.steps.join('\n') : 'No detailed steps available'
+        
+        let dialogContent = `<strong>Connection Test Results</strong><br/><br/>`
+        
+        if (data.ssh_tunnel_used) {
+          dialogContent += `<strong>SSH Tunnel:</strong> ${data.ssh_tunnel_success ? '✅ Success' : '❌ Failed'}<br/>`
+        }
+        
+        dialogContent += `<strong>Database:</strong> ${data.database_connection_success ? '✅ Success' : '❌ Failed'}<br/><br/>`
+        dialogContent += `<strong>Detailed Steps:</strong><br/>`
+        dialogContent += stepsList.replace(/\n/g, '<br/>')
+        
+        this.$q.dialog({
+          title: data.success ? 'Connection Test Passed' : 'Connection Test Failed',
+          message: dialogContent,
+          html: true,
+          ok: {
+            color: data.success ? 'positive' : 'negative',
+            label: 'Close'
+          }
+        })
+        
+        // Also show a brief notification
         this.$q.notify({
           type: data.success ? 'positive' : 'negative',
           message: data.message,
-          timeout: 5000
+          timeout: 3000
         })
+        
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       } finally {

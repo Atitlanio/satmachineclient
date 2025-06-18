@@ -116,3 +116,45 @@ async def m006_create_lamassu_config(db):
         );
         """
     )
+
+
+async def m007_add_ssh_tunnel_support(db):
+    """
+    Add SSH tunnel support to Lamassu configuration table.
+    """
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN use_ssh_tunnel BOOLEAN NOT NULL DEFAULT false;
+        """
+    )
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN ssh_host TEXT;
+        """
+    )
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN ssh_port INTEGER NOT NULL DEFAULT 22;
+        """
+    )
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN ssh_username TEXT;
+        """
+    )
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN ssh_password TEXT;
+        """
+    )
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN ssh_private_key TEXT;
+        """
+    )

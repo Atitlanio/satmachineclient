@@ -5,6 +5,17 @@ import asyncpg
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from loguru import logger
+import socket
+import threading
+import time
+
+try:
+    import paramiko
+    from sshtunnel import SSHTunnelForwarder
+    SSH_AVAILABLE = True
+except ImportError:
+    SSH_AVAILABLE = False
+    logger.warning("SSH tunnel support not available. Install paramiko and sshtunnel: pip install paramiko sshtunnel")
 
 from lnbits.core.services import create_invoice, pay_invoice
 from lnbits.settings import settings
@@ -26,6 +37,7 @@ class LamassuTransactionProcessor:
     def __init__(self):
         self.last_check_time = None
         self.processed_transaction_ids = set()
+        self.ssh_tunnel = None
     
     async def get_db_config(self) -> Optional[Dict[str, Any]]:
         """Get database configuration from the database"""
@@ -41,11 +53,77 @@ class LamassuTransactionProcessor:
                 "database": config.database_name,
                 "user": config.username,
                 "password": config.password,
-                "config_id": config.id
+                "config_id": config.id,
+                "use_ssh_tunnel": config.use_ssh_tunnel,
+                "ssh_host": config.ssh_host,
+                "ssh_port": config.ssh_port,
+                "ssh_username": config.ssh_username,
+                "ssh_password": config.ssh_password,
+                "ssh_private_key": config.ssh_private_key
             }
         except Exception as e:
             logger.error(f"Error getting database configuration: {e}")
             return None
+    
+    def setup_ssh_tunnel(self, db_config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Setup SSH tunnel if required and return modified connection config"""
+        if not db_config.get("use_ssh_tunnel"):
+            return db_config
+            
+        if not SSH_AVAILABLE:
+            logger.error("SSH tunnel requested but paramiko/sshtunnel not available")
+            return None
+            
+        try:
+            # Close existing tunnel if any
+            self.close_ssh_tunnel()
+            
+            ssh_config = {
+                "ssh_address_or_host": (db_config["ssh_host"], db_config["ssh_port"]),
+                "remote_bind_address": (db_config["host"], db_config["port"]),
+                "ssh_username": db_config["ssh_username"],
+                "local_bind_address": ("127.0.0.1",)  # Let sshtunnel choose local port
+            }
+            
+            # Add authentication method
+            if db_config.get("ssh_private_key"):
+                # Use private key authentication
+                ssh_config["ssh_pkey"] = db_config["ssh_private_key"]
+            elif db_config.get("ssh_password"):
+                # Use password authentication
+                ssh_config["ssh_password"] = db_config["ssh_password"]
+            else:
+                logger.error("SSH tunnel requires either private key or password")
+                return None
+            
+            self.ssh_tunnel = SSHTunnelForwarder(**ssh_config)
+            self.ssh_tunnel.start()
+            
+            local_port = self.ssh_tunnel.local_bind_port
+            logger.info(f"SSH tunnel established: localhost:{local_port} -> {db_config['ssh_host']}:{db_config['ssh_port']} -> {db_config['host']}:{db_config['port']}")
+            
+            # Return modified config to connect through tunnel
+            tunnel_config = db_config.copy()
+            tunnel_config["host"] = "127.0.0.1"
+            tunnel_config["port"] = local_port
+            
+            return tunnel_config
+            
+        except Exception as e:
+            logger.error(f"Failed to setup SSH tunnel: {e}")
+            self.close_ssh_tunnel()
+            return None
+    
+    def close_ssh_tunnel(self):
+        """Close SSH tunnel if active"""
+        if self.ssh_tunnel:
+            try:
+                self.ssh_tunnel.stop()
+                logger.info("SSH tunnel closed")
+            except Exception as e:
+                logger.warning(f"Error closing SSH tunnel: {e}")
+            finally:
+                self.ssh_tunnel = None
     
     async def connect_to_lamassu_db(self) -> Optional[asyncpg.Connection]:
         """Establish connection to Lamassu Postgres database"""
@@ -54,12 +132,17 @@ class LamassuTransactionProcessor:
             if not db_config:
                 return None
             
+            # Setup SSH tunnel if required
+            connection_config = self.setup_ssh_tunnel(db_config)
+            if not connection_config:
+                return None
+            
             connection = await asyncpg.connect(
-                host=db_config["host"],
-                port=db_config["port"],
-                database=db_config["database"],
-                user=db_config["user"],
-                password=db_config["password"],
+                host=connection_config["host"],
+                port=connection_config["port"],
+                database=connection_config["database"],
+                user=connection_config["user"],
+                password=connection_config["password"],
                 timeout=30
             )
             logger.info("Successfully connected to Lamassu database")
@@ -286,9 +369,13 @@ class LamassuTransactionProcessor:
                 
             finally:
                 await connection.close()
+                # Close SSH tunnel if it was used
+                self.close_ssh_tunnel()
                 
         except Exception as e:
             logger.error(f"Error in polling cycle: {e}")
+            # Ensure cleanup on error
+            self.close_ssh_tunnel()
 
 
 # Global processor instance

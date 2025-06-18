@@ -69,7 +69,14 @@ window.app = Vue.createApp({
           port: 5432,
           database_name: '',
           username: '',
-          password: ''
+          password: '',
+          // SSH Tunnel settings
+          use_ssh_tunnel: false,
+          ssh_host: '',
+          ssh_port: 22,
+          ssh_username: '',
+          ssh_password: '',
+          ssh_private_key: ''
         }
       },
 
@@ -148,7 +155,14 @@ window.app = Vue.createApp({
           port: this.configDialog.data.port,
           database_name: this.configDialog.data.database_name,
           username: this.configDialog.data.username,
-          password: this.configDialog.data.password
+          password: this.configDialog.data.password,
+          // SSH Tunnel settings
+          use_ssh_tunnel: this.configDialog.data.use_ssh_tunnel,
+          ssh_host: this.configDialog.data.ssh_host,
+          ssh_port: this.configDialog.data.ssh_port,
+          ssh_username: this.configDialog.data.ssh_username,
+          ssh_password: this.configDialog.data.ssh_password,
+          ssh_private_key: this.configDialog.data.ssh_private_key
         }
         
         const {data: config} = await LNbits.api.request(
@@ -178,7 +192,14 @@ window.app = Vue.createApp({
         port: 5432,
         database_name: '',
         username: '',
-        password: ''
+        password: '',
+        // SSH Tunnel settings
+        use_ssh_tunnel: false,
+        ssh_host: '',
+        ssh_port: 22,
+        ssh_username: '',
+        ssh_password: '',
+        ssh_private_key: ''
       }
     },
 
@@ -640,6 +661,22 @@ window.app = Vue.createApp({
   },
 
   computed: {
+    isConfigFormValid() {
+      const data = this.configDialog.data
+      
+      // Basic database fields are required
+      const basicValid = data.host && data.database_name && data.username
+      
+      // If SSH tunnel is enabled, validate SSH fields
+      if (data.use_ssh_tunnel) {
+        const sshValid = data.ssh_host && data.ssh_username && 
+                        (data.ssh_password || data.ssh_private_key)
+        return basicValid && sshValid
+      }
+      
+      return basicValid
+    },
+    
     clientOptions() {
       return this.dcaClients.map(client => ({
         label: `${client.user_id.substring(0, 8)}... (${client.dca_mode})`,

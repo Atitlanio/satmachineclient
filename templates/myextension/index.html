@@ -558,6 +558,83 @@
           hint="Database password"
         ></q-input>
         
+        <q-separator class="q-my-md"></q-separator>
+        
+        <div class="text-h6 q-mb-md">SSH Tunnel (Recommended)</div>
+        
+        <div class="row items-center q-mb-md">
+          <q-toggle
+            v-model="configDialog.data.use_ssh_tunnel"
+            color="primary"
+            @click.stop
+          />
+          <span class="q-ml-sm">Use SSH Tunnel</span>
+        </div>
+        
+        <div v-if="configDialog.data.use_ssh_tunnel" class="q-mt-md" @click.stop>
+          <q-input
+            filled
+            dense
+            v-model.trim="configDialog.data.ssh_host"
+            label="SSH Host *"
+            placeholder="e.g., your-server.com or 192.168.1.100"
+            hint="SSH server hostname or IP address"
+            @click.stop
+          ></q-input>
+          
+          <q-input
+            filled
+            dense
+            type="number"
+            v-model.number="configDialog.data.ssh_port"
+            label="SSH Port *"
+            placeholder="22"
+            hint="SSH port (usually 22)"
+            @click.stop
+          ></q-input>
+          
+          <q-input
+            filled
+            dense
+            v-model.trim="configDialog.data.ssh_username"
+            label="SSH Username *"
+            placeholder="ubuntu"
+            hint="SSH username"
+            @click.stop
+          ></q-input>
+          
+          <q-input
+            filled
+            dense
+            type="password"
+            v-model.trim="configDialog.data.ssh_password"
+            label="SSH Password"
+            placeholder="SSH password (if not using key)"
+            hint="SSH password or leave empty to use private key"
+            @click.stop
+          ></q-input>
+          
+          <q-input
+            filled
+            dense
+            type="textarea"
+            v-model.trim="configDialog.data.ssh_private_key"
+            label="SSH Private Key"
+            placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+            hint="SSH private key content (alternative to password)"
+            rows="4"
+            @click.stop
+          ></q-input>
+          
+          <q-banner class="bg-green-1 text-green-9 q-mt-md">
+            <template v-slot:avatar>
+              <q-icon name="security" color="green" />
+            </template>
+            SSH tunneling keeps your database secure by avoiding direct internet exposure.
+            The database connection will be routed through the SSH server.
+          </q-banner>
+        </div>
+        
         <q-banner v-if="!configDialog.data.id" class="bg-blue-1 text-blue-9">
           <template v-slot:avatar>
             <q-icon name="info" color="blue" />
@@ -571,10 +648,11 @@
             unelevated
             color="primary"
             type="submit"
-            :disable="!configDialog.data.host || !configDialog.data.database_name || !configDialog.data.username"
+            :disable="!isConfigFormValid"
+            @click.stop
             >Save Configuration</q-btn
           >
-          <q-btn v-close-popup flat color="grey" class="q-ml-auto"
+          <q-btn v-close-popup flat color="grey" class="q-ml-auto" @click.stop
             >Cancel</q-btn
           >
         </div>

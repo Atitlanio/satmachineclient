@@ -308,8 +308,10 @@ async def create_lamassu_config(data: CreateLamassuConfigData) -> LamassuConfig:
     await db.execute(
         """
         INSERT INTO myextension.lamassu_config 
-        (id, host, port, database_name, username, password, is_active, created_at, updated_at)
-        VALUES (:id, :host, :port, :database_name, :username, :password, :is_active, :created_at, :updated_at)
+        (id, host, port, database_name, username, password, is_active, created_at, updated_at,
+         use_ssh_tunnel, ssh_host, ssh_port, ssh_username, ssh_password, ssh_private_key)
+        VALUES (:id, :host, :port, :database_name, :username, :password, :is_active, :created_at, :updated_at,
+                :use_ssh_tunnel, :ssh_host, :ssh_port, :ssh_username, :ssh_password, :ssh_private_key)
         """,
         {
             "id": config_id,
@@ -320,7 +322,13 @@ async def create_lamassu_config(data: CreateLamassuConfigData) -> LamassuConfig:
             "password": data.password,
             "is_active": True,
             "created_at": datetime.now(),
-            "updated_at": datetime.now()
+            "updated_at": datetime.now(),
+            "use_ssh_tunnel": data.use_ssh_tunnel,
+            "ssh_host": data.ssh_host,
+            "ssh_port": data.ssh_port,
+            "ssh_username": data.ssh_username,
+            "ssh_password": data.ssh_password,
+            "ssh_private_key": data.ssh_private_key
         }
     )
     return await get_lamassu_config(config_id)

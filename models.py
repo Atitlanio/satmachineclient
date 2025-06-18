@@ -106,6 +106,13 @@ class CreateLamassuConfigData(BaseModel):
     database_name: str
     username: str
     password: str
+    # SSH Tunnel settings
+    use_ssh_tunnel: bool = False
+    ssh_host: Optional[str] = None
+    ssh_port: int = 22
+    ssh_username: Optional[str] = None
+    ssh_password: Optional[str] = None
+    ssh_private_key: Optional[str] = None  # Path to private key file or key content
 
 
 class LamassuConfig(BaseModel):
@@ -120,6 +127,13 @@ class LamassuConfig(BaseModel):
     test_connection_success: Optional[bool]
     created_at: datetime
     updated_at: datetime
+    # SSH Tunnel settings
+    use_ssh_tunnel: bool = False
+    ssh_host: Optional[str] = None
+    ssh_port: int = 22
+    ssh_username: Optional[str] = None
+    ssh_password: Optional[str] = None
+    ssh_private_key: Optional[str] = None
 
 
 class UpdateLamassuConfigData(BaseModel):
@@ -129,6 +143,13 @@ class UpdateLamassuConfigData(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
+    # SSH Tunnel settings
+    use_ssh_tunnel: Optional[bool] = None
+    ssh_host: Optional[str] = None
+    ssh_port: Optional[int] = None
+    ssh_username: Optional[str] = None
+    ssh_password: Optional[str] = None
+    ssh_private_key: Optional[str] = None
 
 
 # Legacy models (keep for backward compatibility during transition)

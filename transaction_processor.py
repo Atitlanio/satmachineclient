@@ -499,7 +499,7 @@ class LamassuTransactionProcessor:
             # Extract transaction details
             crypto_atoms = transaction["crypto_amount"]  # Total sats with commission baked in
             fiat_amount = transaction["fiat_amount"]     # Actual fiat dispensed (principal only)
-            commission_percentage = transaction["commission_percentage"] / 100  # Convert to decimal
+            commission_percentage = transaction["commission_percentage"]  # Already stored as decimal (e.g., 0.045)
             discount = transaction.get("discount", 0.0)  # Discount percentage
             
             # Calculate effective commission percentage after discount (following the reference logic)

@@ -398,7 +398,7 @@ class LamassuTransactionProcessor:
                                 processed_row[key] = str(value)
                             elif key in ['fiat_amount', 'crypto_amount']:
                                 processed_row[key] = int(value) if value else 0
-                            elif key == 'commission_percentage':
+                            elif key in ['commission_percentage', 'discount']:
                                 processed_row[key] = float(value) if value else 0.0
                             elif key == 'transaction_time':
                                 from datetime import datetime
@@ -453,6 +453,7 @@ class LamassuTransactionProcessor:
                 co.device_id,
                 co.status,
                 co.commission_percentage,
+                co.discount,
                 co.crypto_code,
                 co.fiat_code
             FROM cash_out_txs co
@@ -499,11 +500,15 @@ class LamassuTransactionProcessor:
             crypto_atoms = transaction["crypto_amount"]  # Total sats with commission baked in
             fiat_amount = transaction["fiat_amount"]     # Actual fiat dispensed (principal only)
             commission_percentage = transaction["commission_percentage"] / 100  # Convert to decimal
+            discount = transaction.get("discount", 0.0)  # Discount percentage
             
-            # Calculate commission amount in satoshis using the provided logic
+            # Calculate effective commission percentage after discount (following the reference logic)
             if commission_percentage > 0:
-                commission_amount_sats = int(crypto_atoms * commission_percentage)
+                effective_commission = commission_percentage * (100 - discount) / 100
+                # Calculate commission amount in satoshis using int() to round down
+                commission_amount_sats = int(crypto_atoms * effective_commission)
             else:
+                effective_commission = 0.0
                 commission_amount_sats = 0
             
             # Calculate net crypto amount (what should be distributed to DCA clients)
@@ -512,8 +517,9 @@ class LamassuTransactionProcessor:
             # Calculate exchange rate based on net amounts
             exchange_rate = net_crypto_atoms / fiat_amount if fiat_amount > 0 else 0  # sats per fiat unit
             
-            logger.info(f"Transaction - Total crypto: {crypto_atoms} sats, Commission: {commission_amount_sats} sats, Net for DCA: {net_crypto_atoms} sats")
-            logger.info(f"Fiat dispensed: {fiat_amount}, Exchange rate: {exchange_rate} sats/fiat_unit")
+            logger.info(f"Transaction - Total crypto: {crypto_atoms} sats")
+            logger.info(f"Commission: {commission_percentage*100:.1f}% - {discount:.1f}% discount = {effective_commission*100:.1f}% effective ({commission_amount_sats} sats)")
+            logger.info(f"Net for DCA: {net_crypto_atoms} sats, Fiat dispensed: {fiat_amount}, Exchange rate: {exchange_rate:.2f} sats/fiat_unit")
             
             # Get balance summaries for all clients to calculate proportions
             client_balances = {}

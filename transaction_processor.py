@@ -505,21 +505,22 @@ class LamassuTransactionProcessor:
             # Calculate effective commission percentage after discount (following the reference logic)
             if commission_percentage > 0:
                 effective_commission = commission_percentage * (100 - discount) / 100
-                # Calculate commission amount in satoshis using int() to round down
-                commission_amount_sats = int(crypto_atoms * effective_commission)
+                # Since crypto_atoms already includes commission, we need to extract the base amount
+                # Formula: crypto_atoms = base_amount * (1 + effective_commission)
+                # Therefore: base_amount = crypto_atoms / (1 + effective_commission)
+                base_crypto_atoms = int(crypto_atoms / (1 + effective_commission))
+                commission_amount_sats = crypto_atoms - base_crypto_atoms
             else:
                 effective_commission = 0.0
+                base_crypto_atoms = crypto_atoms
                 commission_amount_sats = 0
             
-            # Calculate net crypto amount (what should be distributed to DCA clients)
-            net_crypto_atoms = crypto_atoms - commission_amount_sats
-            
-            # Calculate exchange rate based on net amounts
-            exchange_rate = net_crypto_atoms / fiat_amount if fiat_amount > 0 else 0  # sats per fiat unit
+            # Calculate exchange rate based on base amounts
+            exchange_rate = base_crypto_atoms / fiat_amount if fiat_amount > 0 else 0  # sats per fiat unit
             
             logger.info(f"Transaction - Total crypto: {crypto_atoms} sats")
             logger.info(f"Commission: {commission_percentage*100:.1f}% - {discount:.1f}% discount = {effective_commission*100:.1f}% effective ({commission_amount_sats} sats)")
-            logger.info(f"Net for DCA: {net_crypto_atoms} sats, Fiat dispensed: {fiat_amount}, Exchange rate: {exchange_rate:.2f} sats/fiat_unit")
+            logger.info(f"Base for DCA: {base_crypto_atoms} sats, Fiat dispensed: {fiat_amount}, Exchange rate: {exchange_rate:.2f} sats/fiat_unit")
             
             # Get balance summaries for all clients to calculate proportions
             client_balances = {}
@@ -542,8 +543,8 @@ class LamassuTransactionProcessor:
                 # Calculate this client's proportion of the total DCA pool
                 proportion = client_balance / total_confirmed_deposits
                 
-                # Calculate client's share of the net crypto (after commission)
-                client_sats_amount = int(net_crypto_atoms * proportion)
+                # Calculate client's share of the base crypto (after commission)
+                client_sats_amount = int(base_crypto_atoms * proportion)
                 
                 # Calculate equivalent fiat value for tracking purposes
                 client_fiat_amount = int(client_sats_amount / exchange_rate) if exchange_rate > 0 else 0

@@ -158,3 +158,21 @@ async def m007_add_ssh_tunnel_support(db):
         ADD COLUMN ssh_private_key TEXT;
         """
     )
+
+
+async def m008_add_last_poll_tracking(db):
+    """
+    Add last poll time tracking to Lamassu configuration table.
+    """
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN last_poll_time TIMESTAMP;
+        """
+    )
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN last_successful_poll TIMESTAMP;
+        """
+    )

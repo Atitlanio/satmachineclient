@@ -474,6 +474,7 @@ window.app = Vue.createApp({
         
         // Refresh data
         await this.getDeposits()
+        await this.getLamassuConfig()
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       } finally {

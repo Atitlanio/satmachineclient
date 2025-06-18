@@ -134,6 +134,9 @@ class LamassuConfig(BaseModel):
     ssh_username: Optional[str] = None
     ssh_password: Optional[str] = None
     ssh_private_key: Optional[str] = None
+    # Poll tracking
+    last_poll_time: Optional[datetime] = None
+    last_successful_poll: Optional[datetime] = None
 
 
 class UpdateLamassuConfigData(BaseModel):

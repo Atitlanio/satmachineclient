@@ -351,6 +351,7 @@ async def api_manual_poll(
     """Manually trigger a poll of the Lamassu database"""
     try:
         from .transaction_processor import transaction_processor
+        from .crud import update_poll_start_time, update_poll_success_time
         
         # Get database configuration
         db_config = await transaction_processor.connect_to_lamassu_db()
@@ -360,6 +361,11 @@ async def api_manual_poll(
                 detail="Could not get Lamassu database configuration"
             )
         
+        config_id = db_config["config_id"]
+        
+        # Record manual poll start time
+        await update_poll_start_time(config_id)
+        
         # Fetch and process transactions via SSH
         new_transactions = await transaction_processor.fetch_new_transactions(db_config)
         
@@ -368,10 +374,13 @@ async def api_manual_poll(
             await transaction_processor.process_transaction(transaction)
             transactions_processed += 1
         
+        # Record successful manual poll completion
+        await update_poll_success_time(config_id)
+        
         return {
             "success": True,
             "transactions_processed": transactions_processed,
-            "message": f"Processed {transactions_processed} new transactions"
+            "message": f"Processed {transactions_processed} new transactions since last poll"
         }
             
     except Exception as e:

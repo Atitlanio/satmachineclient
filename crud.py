@@ -1,7 +1,7 @@
 # Description: This file contains the CRUD operations for talking to the database.
 
 from typing import List, Optional, Union
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
@@ -373,6 +373,7 @@ async def update_lamassu_config(config_id: str, data: UpdateLamassuConfigData) -
 
 
 async def update_config_test_result(config_id: str, success: bool) -> None:
+    utc_now = datetime.now(timezone.utc)
     await db.execute(
         """
         UPDATE myextension.lamassu_config 
@@ -381,9 +382,9 @@ async def update_config_test_result(config_id: str, success: bool) -> None:
         """,
         {
             "id": config_id,
-            "test_time": datetime.now(),
+            "test_time": utc_now,
             "success": success,
-            "updated_at": datetime.now()
+            "updated_at": utc_now
         }
     )
 
@@ -392,4 +393,38 @@ async def delete_lamassu_config(config_id: str) -> None:
     await db.execute(
         "DELETE FROM myextension.lamassu_config WHERE id = :id", 
         {"id": config_id}
+    )
+
+
+async def update_poll_start_time(config_id: str) -> None:
+    """Update the last poll start time"""
+    utc_now = datetime.now(timezone.utc)
+    await db.execute(
+        """
+        UPDATE myextension.lamassu_config 
+        SET last_poll_time = :poll_time, updated_at = :updated_at
+        WHERE id = :id
+        """,
+        {
+            "id": config_id,
+            "poll_time": utc_now,
+            "updated_at": utc_now
+        }
+    )
+
+
+async def update_poll_success_time(config_id: str) -> None:
+    """Update the last successful poll time"""
+    utc_now = datetime.now(timezone.utc)
+    await db.execute(
+        """
+        UPDATE myextension.lamassu_config 
+        SET last_successful_poll = :poll_time, updated_at = :updated_at
+        WHERE id = :id
+        """,
+        {
+            "id": config_id,
+            "poll_time": utc_now,
+            "updated_at": utc_now
+        }
     )

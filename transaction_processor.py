@@ -495,13 +495,25 @@ class LamassuTransactionProcessor:
                 logger.info("No Flow Mode clients found - skipping distribution")
                 return {}
             
-            # Calculate principal amount (total - commission)
-            fiat_amount = transaction["fiat_amount"]
-            commission_percentage = transaction["commission_percentage"]
-            commission_amount = int(fiat_amount * commission_percentage / 100)
-            principal_amount = fiat_amount - commission_amount
+            # Extract transaction details
+            crypto_atoms = transaction["crypto_amount"]  # Total sats with commission baked in
+            fiat_amount = transaction["fiat_amount"]     # Actual fiat dispensed (principal only)
+            commission_percentage = transaction["commission_percentage"] / 100  # Convert to decimal
             
-            logger.info(f"Transaction: {fiat_amount}, Commission: {commission_amount}, Principal: {principal_amount}")
+            # Calculate commission amount in satoshis using the provided logic
+            if commission_percentage > 0:
+                commission_amount_sats = int(crypto_atoms * commission_percentage)
+            else:
+                commission_amount_sats = 0
+            
+            # Calculate net crypto amount (what should be distributed to DCA clients)
+            net_crypto_atoms = crypto_atoms - commission_amount_sats
+            
+            # Calculate exchange rate based on net amounts
+            exchange_rate = net_crypto_atoms / fiat_amount if fiat_amount > 0 else 0  # sats per fiat unit
+            
+            logger.info(f"Transaction - Total crypto: {crypto_atoms} sats, Commission: {commission_amount_sats} sats, Net for DCA: {net_crypto_atoms} sats")
+            logger.info(f"Fiat dispensed: {fiat_amount}, Exchange rate: {exchange_rate} sats/fiat_unit")
             
             # Get balance summaries for all clients to calculate proportions
             client_balances = {}
@@ -519,13 +531,16 @@ class LamassuTransactionProcessor:
             
             # Calculate proportional distribution
             distributions = {}
-            exchange_rate = transaction["crypto_amount"] / transaction["fiat_amount"]  # sats per fiat unit
             
             for client_id, client_balance in client_balances.items():
-                # Calculate this client's proportion of the principal
+                # Calculate this client's proportion of the total DCA pool
                 proportion = client_balance / total_confirmed_deposits
-                client_fiat_amount = int(principal_amount * proportion)
-                client_sats_amount = int(client_fiat_amount * exchange_rate)
+                
+                # Calculate client's share of the net crypto (after commission)
+                client_sats_amount = int(net_crypto_atoms * proportion)
+                
+                # Calculate equivalent fiat value for tracking purposes
+                client_fiat_amount = int(client_sats_amount / exchange_rate) if exchange_rate > 0 else 0
                 
                 distributions[client_id] = {
                     "fiat_amount": client_fiat_amount,
@@ -533,7 +548,7 @@ class LamassuTransactionProcessor:
                     "exchange_rate": exchange_rate
                 }
                 
-                logger.info(f"Client {client_id[:8]}... gets {client_fiat_amount} fiat units = {client_sats_amount} sats")
+                logger.info(f"Client {client_id[:8]}... gets {client_sats_amount} sats (≈{client_fiat_amount} fiat units, {proportion:.2%} share)")
             
             return distributions
             

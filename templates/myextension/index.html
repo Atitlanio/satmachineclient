@@ -175,7 +175,8 @@
           <template v-slot:body="props">
             <q-tr :props="props">
               <q-td v-for="col in props.cols" :key="col.name" :props="props">
-                <div v-if="col.field == 'amount'">${ formatCurrency(col.value) }</div>
+                <div v-if="col.field == 'client_id'">${ getClientUsername(col.value) }</div>
+                <div v-else-if="col.field == 'amount'">${ formatCurrency(col.value) }</div>
                 <div v-else-if="col.field == 'status'">
                   <q-badge :color="col.value === 'confirmed' ? 'green' : 'orange'">
                     ${ col.value }

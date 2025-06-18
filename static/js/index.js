@@ -140,6 +140,11 @@ window.app = Vue.createApp({
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString('en-US', { hour12: false })
     },
 
+    getClientUsername(clientId) {
+      const client = this.dcaClients.find(c => c.id === clientId)
+      return client ? (client.username || client.user_id.substring(0, 8) + '...') : clientId
+    },
+
 
     // Configuration Methods
     async getLamassuConfig() {

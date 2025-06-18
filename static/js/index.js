@@ -54,6 +54,24 @@ window.app = Vue.createApp({
         amount: null,
         notes: ''
       },
+      
+      // Polling status
+      lastPollTime: null,
+      testingConnection: false,
+      runningManualPoll: false,
+      lamassuConfig: null,
+      
+      // Config dialog
+      configDialog: {
+        show: false,
+        data: {
+          host: '',
+          port: 5432,
+          database_name: '',
+          username: '',
+          password: ''
+        }
+      },
 
       // Options
       currencyOptions: [
@@ -106,6 +124,62 @@ window.app = Vue.createApp({
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString).toLocaleDateString()
+    },
+
+    // Configuration Methods
+    async getLamassuConfig() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/myextension/api/v1/dca/config',
+          this.g.user.wallets[0].inkey
+        )
+        this.lamassuConfig = data
+      } catch (error) {
+        // It's OK if no config exists yet
+        this.lamassuConfig = null
+      }
+    },
+    
+    async saveConfiguration() {
+      try {
+        const data = {
+          host: this.configDialog.data.host,
+          port: this.configDialog.data.port,
+          database_name: this.configDialog.data.database_name,
+          username: this.configDialog.data.username,
+          password: this.configDialog.data.password
+        }
+        
+        const {data: config} = await LNbits.api.request(
+          'POST',
+          '/myextension/api/v1/dca/config',
+          this.g.user.wallets[0].adminkey,
+          data
+        )
+        
+        this.lamassuConfig = config
+        this.closeConfigDialog()
+        
+        this.$q.notify({
+          type: 'positive',
+          message: 'Database configuration saved successfully',
+          timeout: 5000
+        })
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+    
+    closeConfigDialog() {
+      this.configDialog.show = false
+      this.configDialog.data = {
+        host: '',
+        port: 5432,
+        database_name: '',
+        username: '',
+        password: ''
+      }
     },
 
     // DCA Client Methods
@@ -313,6 +387,53 @@ window.app = Vue.createApp({
     async exportDepositsCSV() {
       await LNbits.utils.exportCSV(this.depositsTable.columns, this.deposits)
     },
+    
+    // Polling Methods
+    async testDatabaseConnection() {
+      this.testingConnection = true
+      try {
+        const {data} = await LNbits.api.request(
+          'POST',
+          '/myextension/api/v1/dca/test-connection',
+          this.g.user.wallets[0].adminkey
+        )
+        
+        this.$q.notify({
+          type: data.success ? 'positive' : 'negative',
+          message: data.message,
+          timeout: 5000
+        })
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      } finally {
+        this.testingConnection = false
+      }
+    },
+    
+    async manualPoll() {
+      this.runningManualPoll = true
+      try {
+        const {data} = await LNbits.api.request(
+          'POST',
+          '/myextension/api/v1/dca/manual-poll',
+          this.g.user.wallets[0].adminkey
+        )
+        
+        this.lastPollTime = new Date().toLocaleString()
+        this.$q.notify({
+          type: 'positive',
+          message: `Manual poll completed. Found ${data.transactions_processed} new transactions.`,
+          timeout: 5000
+        })
+        
+        // Refresh data
+        await this.getDeposits()
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      } finally {
+        this.runningManualPoll = false
+      }
+    },
 
     // Legacy Methods (keep for backward compatibility)
     async closeFormDialog() {
@@ -509,6 +630,7 @@ window.app = Vue.createApp({
   async created() {
     // Load DCA admin data
     await Promise.all([
+      this.getLamassuConfig(),
       this.getDcaClients(),
       this.getDeposits()
     ])

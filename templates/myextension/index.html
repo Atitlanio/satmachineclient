@@ -332,6 +332,59 @@
             </q-card-section>
           </q-expansion-item>
           <q-separator></q-separator>
+          <q-expansion-item
+            group="api"
+            icon="settings"
+            label="Lamassu Database Config"
+            :content-inset-level="0.5"
+          >
+            <q-card-section class="text-caption">
+              <div v-if="lamassuConfig">
+                <p><strong>Database:</strong> ${ lamassuConfig.host }:${ lamassuConfig.port }/${ lamassuConfig.database_name }</p>
+                <p><strong>Status:</strong> 
+                  <q-badge v-if="lamassuConfig.test_connection_success === true" color="green">Connected</q-badge>
+                  <q-badge v-else-if="lamassuConfig.test_connection_success === false" color="red">Failed</q-badge>
+                  <q-badge v-else color="grey">Not tested</q-badge>
+                </p>
+                <p><strong>Last Poll:</strong> ${ lastPollTime || 'Not yet run' }</p>
+              </div>
+              <div v-else>
+                <p><strong>Status:</strong> <q-badge color="orange">Not configured</q-badge></p>
+              </div>
+              
+              <div class="q-mt-md">
+                <q-btn 
+                  size="sm" 
+                  color="primary" 
+                  @click="configDialog.show = true"
+                  icon="settings"
+                >
+                  Configure Database
+                </q-btn>
+                <q-btn 
+                  v-if="lamassuConfig"
+                  size="sm" 
+                  color="accent" 
+                  @click="testDatabaseConnection" 
+                  :loading="testingConnection"
+                  class="q-ml-sm"
+                >
+                  Test Connection
+                </q-btn>
+                <q-btn 
+                  v-if="lamassuConfig"
+                  size="sm" 
+                  color="secondary" 
+                  @click="manualPoll" 
+                  :loading="runningManualPoll"
+                  class="q-ml-sm"
+                >
+                  Manual Poll
+                </q-btn>
+              </div>
+            </q-card-section>
+          </q-expansion-item>
+          <q-separator></q-separator>
           {% include "myextension/_api_docs.html" %}
         </q-list>
       </q-card-section>
@@ -447,6 +500,85 @@
       <div class="row q-mt-lg">
         <q-btn v-close-popup flat color="grey" class="q-ml-auto">Close</q-btn>
       </div>
+    </q-card>
+  </q-dialog>
+
+  <!--/////////////////////////////////////////////////-->
+  <!--//////////////LAMASSU CONFIG DIALOG//////////////-->
+  <!--/////////////////////////////////////////////////-->
+
+  <q-dialog v-model="configDialog.show" position="top" @hide="closeConfigDialog">
+    <q-card class="q-pa-lg q-pt-xl" style="width: 600px; max-width: 90vw">
+      <div class="text-h6 q-mb-md">Lamassu Database Configuration</div>
+      <q-form @submit="saveConfiguration" class="q-gutter-md">
+        <q-input
+          filled
+          dense
+          v-model.trim="configDialog.data.host"
+          label="Database Host *"
+          placeholder="e.g., localhost or 192.168.1.100"
+          hint="Hostname or IP address of the Lamassu Postgres server"
+        ></q-input>
+        
+        <q-input
+          filled
+          dense
+          type="number"
+          v-model.number="configDialog.data.port"
+          label="Database Port *"
+          placeholder="5432"
+          hint="Postgres port (usually 5432)"
+        ></q-input>
+        
+        <q-input
+          filled
+          dense
+          v-model.trim="configDialog.data.database_name"
+          label="Database Name *"
+          placeholder="lamassu"
+          hint="Name of the Lamassu database"
+        ></q-input>
+        
+        <q-input
+          filled
+          dense
+          v-model.trim="configDialog.data.username"
+          label="Username *"
+          placeholder="postgres"
+          hint="Database username with read access"
+        ></q-input>
+        
+        <q-input
+          filled
+          dense
+          type="password"
+          v-model.trim="configDialog.data.password"
+          label="Password *"
+          placeholder="Enter database password"
+          hint="Database password"
+        ></q-input>
+        
+        <q-banner v-if="!configDialog.data.id" class="bg-blue-1 text-blue-9">
+          <template v-slot:avatar>
+            <q-icon name="info" color="blue" />
+          </template>
+          This configuration will be securely stored and used for hourly polling.
+          Only read access to the Lamassu database is required.
+        </q-banner>
+        
+        <div class="row q-mt-lg">
+          <q-btn
+            unelevated
+            color="primary"
+            type="submit"
+            :disable="!configDialog.data.host || !configDialog.data.database_name || !configDialog.data.username"
+            >Save Configuration</q-btn
+          >
+          <q-btn v-close-popup flat color="grey" class="q-ml-auto"
+            >Cancel</q-btn
+          >
+        </div>
+      </q-form>
     </q-card>
   </q-dialog>
 

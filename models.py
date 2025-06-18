@@ -99,6 +99,38 @@ class LamassuTransaction(BaseModel):
     timestamp: datetime
 
 
+# Lamassu Configuration Models
+class CreateLamassuConfigData(BaseModel):
+    host: str
+    port: int = 5432
+    database_name: str
+    username: str
+    password: str
+
+
+class LamassuConfig(BaseModel):
+    id: str
+    host: str
+    port: int
+    database_name: str
+    username: str
+    password: str
+    is_active: bool
+    test_connection_last: Optional[datetime]
+    test_connection_success: Optional[bool]
+    created_at: datetime
+    updated_at: datetime
+
+
+class UpdateLamassuConfigData(BaseModel):
+    host: Optional[str] = None
+    port: Optional[int] = None
+    database_name: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 # Legacy models (keep for backward compatibility during transition)
 class CreateMyExtensionData(BaseModel):
     id: Optional[str] = ""

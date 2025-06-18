@@ -5,7 +5,7 @@ from lnbits.tasks import create_permanent_unique_task
 from loguru import logger
 
 from .crud import db
-from .tasks import wait_for_paid_invoices
+from .tasks import wait_for_paid_invoices, hourly_transaction_polling
 from .views import myextension_generic_router
 from .views_api import myextension_api_router
 from .views_lnurl import myextension_lnurl_router
@@ -40,8 +40,13 @@ def myextension_stop():
 
 
 def myextension_start():
-    task = create_permanent_unique_task("ext_myextension", wait_for_paid_invoices)
-    scheduled_tasks.append(task)
+    # Start invoice listener task
+    invoice_task = create_permanent_unique_task("ext_myextension", wait_for_paid_invoices)
+    scheduled_tasks.append(invoice_task)
+    
+    # Start hourly transaction polling task
+    polling_task = create_permanent_unique_task("ext_myextension_polling", hourly_transaction_polling)
+    scheduled_tasks.append(polling_task)
 
 
 __all__ = [

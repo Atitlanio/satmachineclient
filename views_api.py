@@ -1,6 +1,7 @@
 # Description: This file contains the extensions API endpoints.
 
 from http import HTTPStatus
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from lnbits.core.crud import get_user
@@ -26,6 +27,14 @@ from .crud import (
     get_deposit,
     update_deposit_status,
     get_client_balance_summary,
+    # Lamassu config CRUD operations
+    create_lamassu_config,
+    get_lamassu_config,
+    get_active_lamassu_config,
+    get_all_lamassu_configs,
+    update_lamassu_config,
+    update_config_test_result,
+    delete_lamassu_config,
 )
 from .helpers import lnurler
 from .models import (
@@ -33,7 +42,8 @@ from .models import (
     # DCA models
     CreateDcaClientData, DcaClient, UpdateDcaClientData,
     CreateDepositData, DcaDeposit, UpdateDepositStatusData,
-    ClientBalanceSummary
+    ClientBalanceSummary,
+    CreateLamassuConfigData, LamassuConfig, UpdateLamassuConfigData
 )
 
 myextension_api_router = APIRouter()
@@ -307,3 +317,129 @@ async def api_update_deposit_status(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Failed to update deposit."
         )
     return updated_deposit
+
+
+# Transaction Polling Endpoints
+
+@myextension_api_router.post("/api/v1/dca/test-connection")
+async def api_test_database_connection(
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    """Test connection to Lamassu database"""
+    try:
+        from .transaction_processor import transaction_processor
+        
+        connection = await transaction_processor.connect_to_lamassu_db()
+        if connection:
+            await connection.close()
+            return {
+                "success": True,
+                "message": "Successfully connected to Lamassu database"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to connect to Lamassu database. Check configuration."
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Database connection error: {str(e)}"
+        }
+
+
+@myextension_api_router.post("/api/v1/dca/manual-poll")
+async def api_manual_poll(
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    """Manually trigger a poll of the Lamassu database"""
+    try:
+        from .transaction_processor import transaction_processor
+        
+        # Connect to database
+        connection = await transaction_processor.connect_to_lamassu_db()
+        if not connection:
+            raise HTTPException(
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+                detail="Could not connect to Lamassu database"
+            )
+        
+        try:
+            # Fetch and process transactions
+            new_transactions = await transaction_processor.fetch_new_transactions(connection)
+            
+            transactions_processed = 0
+            for transaction in new_transactions:
+                await transaction_processor.process_transaction(transaction)
+                transactions_processed += 1
+            
+            return {
+                "success": True,
+                "transactions_processed": transactions_processed,
+                "message": f"Processed {transactions_processed} new transactions"
+            }
+            
+        finally:
+            await connection.close()
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Error during manual poll: {str(e)}"
+        )
+
+
+# Lamassu Configuration Endpoints
+
+@myextension_api_router.get("/api/v1/dca/config")
+async def api_get_lamassu_config(
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> Optional[LamassuConfig]:
+    """Get active Lamassu database configuration"""
+    return await get_active_lamassu_config()
+
+
+@myextension_api_router.post("/api/v1/dca/config", status_code=HTTPStatus.CREATED)
+async def api_create_lamassu_config(
+    data: CreateLamassuConfigData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> LamassuConfig:
+    """Create/update Lamassu database configuration"""
+    return await create_lamassu_config(data)
+
+
+@myextension_api_router.put("/api/v1/dca/config/{config_id}")
+async def api_update_lamassu_config(
+    config_id: str,
+    data: UpdateLamassuConfigData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> LamassuConfig:
+    """Update Lamassu database configuration"""
+    config = await get_lamassu_config(config_id)
+    if not config:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Configuration not found."
+        )
+    
+    updated_config = await update_lamassu_config(config_id, data)
+    if not updated_config:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="Failed to update configuration."
+        )
+    return updated_config
+
+
+@myextension_api_router.delete("/api/v1/dca/config/{config_id}")
+async def api_delete_lamassu_config(
+    config_id: str,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    """Delete Lamassu database configuration"""
+    config = await get_lamassu_config(config_id)
+    if not config:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Configuration not found."
+        )
+    
+    await delete_lamassu_config(config_id)
+    return {"message": "Configuration deleted successfully"}

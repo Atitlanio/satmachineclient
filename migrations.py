@@ -93,3 +93,26 @@ async def m005_create_dca_payments(db):
         );
         """
     )
+
+
+async def m006_create_lamassu_config(db):
+    """
+    Create Lamassu database configuration table.
+    """
+    await db.execute(
+        f"""
+        CREATE TABLE myextension.lamassu_config (
+            id TEXT PRIMARY KEY NOT NULL,
+            host TEXT NOT NULL,
+            port INTEGER NOT NULL DEFAULT 5432,
+            database_name TEXT NOT NULL,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            test_connection_last TIMESTAMP,
+            test_connection_success BOOLEAN,
+            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
+            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
+        );
+        """
+    )

@@ -568,6 +568,20 @@
         
         <q-separator class="q-my-md"></q-separator>
         
+        <div class="text-h6 q-mb-md">DCA Source Wallet</div>
+        
+        <q-select
+          filled
+          dense
+          :options="g.user.wallets"
+          v-model="configDialog.data.selectedWallet"
+          label="Source Wallet for DCA Distributions *"
+          option-label="name"
+          hint="Wallet that holds Bitcoin for distribution to DCA clients"
+        ></q-select>
+        
+        <q-separator class="q-my-md"></q-separator>
+        
         <div class="text-h6 q-mb-md">SSH Tunnel (Recommended)</div>
         
         <div class="row items-center q-mb-md">

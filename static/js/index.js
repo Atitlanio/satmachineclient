@@ -71,6 +71,7 @@ window.app = Vue.createApp({
           database_name: '',
           username: '',
           password: '',
+          selectedWallet: null,
           // SSH Tunnel settings
           use_ssh_tunnel: false,
           ssh_host: '',
@@ -169,6 +170,7 @@ window.app = Vue.createApp({
           database_name: this.configDialog.data.database_name,
           username: this.configDialog.data.username,
           password: this.configDialog.data.password,
+          source_wallet_id: this.configDialog.data.selectedWallet?.id,
           // SSH Tunnel settings
           use_ssh_tunnel: this.configDialog.data.use_ssh_tunnel,
           ssh_host: this.configDialog.data.ssh_host,
@@ -206,6 +208,7 @@ window.app = Vue.createApp({
         database_name: '',
         username: '',
         password: '',
+        selectedWallet: null,
         // SSH Tunnel settings
         use_ssh_tunnel: false,
         ssh_host: '',
@@ -705,7 +708,7 @@ window.app = Vue.createApp({
       const data = this.configDialog.data
       
       // Basic database fields are required
-      const basicValid = data.host && data.database_name && data.username
+      const basicValid = data.host && data.database_name && data.username && data.selectedWallet
       
       // If SSH tunnel is enabled, validate SSH fields
       if (data.use_ssh_tunnel) {

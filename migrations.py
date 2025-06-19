@@ -188,3 +188,15 @@ async def m009_add_username_to_dca_clients(db):
         ADD COLUMN username TEXT;
         """
     )
+
+
+async def m010_add_source_wallet_to_lamassu_config(db):
+    """
+    Add source wallet ID to Lamassu configuration table for DCA distributions.
+    """
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN source_wallet_id TEXT;
+        """
+    )

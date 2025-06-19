@@ -109,6 +109,8 @@ class CreateLamassuConfigData(BaseModel):
     database_name: str
     username: str
     password: str
+    # Source wallet for DCA distributions
+    source_wallet_id: Optional[str] = None
     # SSH Tunnel settings
     use_ssh_tunnel: bool = False
     ssh_host: Optional[str] = None
@@ -130,6 +132,8 @@ class LamassuConfig(BaseModel):
     test_connection_success: Optional[bool]
     created_at: datetime
     updated_at: datetime
+    # Source wallet for DCA distributions
+    source_wallet_id: Optional[str] = None
     # SSH Tunnel settings
     use_ssh_tunnel: bool = False
     ssh_host: Optional[str] = None
@@ -149,6 +153,8 @@ class UpdateLamassuConfigData(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
+    # Source wallet for DCA distributions
+    source_wallet_id: Optional[str] = None
     # SSH Tunnel settings
     use_ssh_tunnel: Optional[bool] = None
     ssh_host: Optional[str] = None

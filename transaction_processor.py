@@ -650,27 +650,31 @@ class LamassuTransactionProcessor:
                 return False
             
             # Pay the invoice from the DCA admin wallet (this extension's wallet)
-            # We need to get the admin wallet that manages DCA funds
+            # Get the admin wallet that manages DCA funds
             admin_config = await get_active_lamassu_config()
             if not admin_config:
                 logger.error("No active Lamassu config found - cannot determine source wallet")
                 return False
             
-            # TODO: We need to determine which wallet holds the DCA funds
-            # For now, we'll need to add a source_wallet_id to the LamassuConfig
-            # This is the wallet that receives the Bitcoin from Lamassu and distributes to clients
-            logger.warning("DCA source wallet not configured - payment creation successful but not sent")
-            logger.info(f"Created invoice for {amount_sats} sats to client {client.username or client.user_id}")
-            logger.info(f"Invoice: {new_payment.bolt11}")
+            if not admin_config.source_wallet_id:
+                logger.warning("DCA source wallet not configured - payment creation successful but not sent")
+                logger.info(f"Created invoice for {amount_sats} sats to client {client.username or client.user_id}")
+                logger.info(f"Invoice: {new_payment.bolt11}")
+                return True
             
-            # TODO: Implement the actual payment once source wallet is configured
-            # await pay_invoice(
-            #     payment_request=new_payment.bolt11,
-            #     wallet_id=source_wallet_id,
-            #     description=memo,
-            #     extra=extra )
-            
-            return True
+            # Pay the invoice from the configured source wallet
+            try:
+                await pay_invoice(
+                    payment_request=new_payment.bolt11,
+                    wallet_id=admin_config.source_wallet_id,
+                    description=memo,
+                    extra=extra
+                )
+                logger.info(f"DCA payment completed: {amount_sats} sats sent to {client.username or client.user_id}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to pay invoice for client {client.username or client.user_id}: {e}")
+                return False
             
         except Exception as e:
             logger.error(f"Error sending DCA payment to client {client.username or client.user_id}: {e}")

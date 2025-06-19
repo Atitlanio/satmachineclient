@@ -706,6 +706,58 @@ class LamassuTransactionProcessor:
             logger.error(f"Error crediting source wallet for transaction {transaction.get('transaction_id', 'unknown')}: {e}")
             return False
 
+    async def send_commission_payment(self, transaction: Dict[str, Any], commission_amount_sats: int) -> bool:
+        """Send commission to the configured commission wallet"""
+        try:
+            # Get the configuration to find commission wallet
+            admin_config = await get_active_lamassu_config()
+            if not admin_config or not admin_config.commission_wallet_id:
+                logger.info("No commission wallet configured - commission remains in source wallet")
+                return True  # Not an error, just no transfer needed
+            
+            if not admin_config.source_wallet_id:
+                logger.error("No source wallet configured - cannot send commission")
+                return False
+            
+            transaction_id = transaction["transaction_id"]
+            
+            # Create invoice in commission wallet
+            commission_memo = f"Commission: {commission_amount_sats} sats from Lamassu transaction {transaction_id[:8]}..."
+            
+            commission_payment = await create_invoice(
+                wallet_id=admin_config.commission_wallet_id,
+                amount=commission_amount_sats,
+                internal=True,
+                memo=commission_memo,
+                extra={
+                    "tag": "dca_commission",
+                    "lamassu_transaction_id": transaction_id,
+                    "commission_amount": commission_amount_sats
+                }
+            )
+            
+            if not commission_payment:
+                logger.error(f"Failed to create commission invoice for transaction {transaction_id}")
+                return False
+            
+            # Pay the commission invoice from source wallet
+            await pay_invoice(
+                payment_request=commission_payment.bolt11,
+                wallet_id=admin_config.source_wallet_id,
+                description=commission_memo,
+                extra={
+                    "tag": "dca_commission_payment",
+                    "lamassu_transaction_id": transaction_id
+                }
+            )
+            
+            logger.info(f"Commission payment completed: {commission_amount_sats} sats sent to commission wallet for transaction {transaction_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error sending commission payment for transaction {transaction.get('transaction_id', 'unknown')}: {e}")
+            return False
+
     async def process_transaction(self, transaction: Dict[str, Any]) -> None:
         """Process a single transaction - calculate and distribute DCA payments"""
         try:
@@ -732,8 +784,24 @@ class LamassuTransactionProcessor:
                 logger.info(f"No distributions calculated for transaction {transaction_id}")
                 return
             
+            # Calculate commission amount for sending to commission wallet
+            crypto_atoms = transaction["crypto_amount"]
+            commission_percentage = transaction["commission_percentage"]
+            discount = transaction.get("discount", 0.0)
+            
+            if commission_percentage > 0:
+                effective_commission = commission_percentage * (100 - discount) / 100
+                base_crypto_atoms = int(crypto_atoms / (1 + effective_commission))
+                commission_amount_sats = crypto_atoms - base_crypto_atoms
+            else:
+                commission_amount_sats = 0
+            
             # Distribute to clients
             await self.distribute_to_clients(transaction, distributions)
+            
+            # Send commission to commission wallet (if configured)
+            if commission_amount_sats > 0:
+                await self.send_commission_payment(transaction, commission_amount_sats)
             
             logger.info(f"Successfully processed transaction {transaction_id}")
             

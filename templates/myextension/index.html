@@ -580,6 +580,16 @@
           hint="Wallet that holds Bitcoin for distribution to DCA clients"
         ></q-select>
         
+        <q-select
+          filled
+          dense
+          :options="g.user.wallets"
+          v-model="configDialog.data.selectedCommissionWallet"
+          label="Commission Wallet (Optional)"
+          option-label="name"
+          hint="Wallet where commission earnings will be sent (leave empty to keep in source wallet)"
+        ></q-select>
+        
         <q-separator class="q-my-md"></q-separator>
         
         <div class="text-h6 q-mb-md">SSH Tunnel (Recommended)</div>

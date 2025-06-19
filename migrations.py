@@ -200,3 +200,15 @@ async def m010_add_source_wallet_to_lamassu_config(db):
         ADD COLUMN source_wallet_id TEXT;
         """
     )
+
+
+async def m011_add_commission_wallet_to_lamassu_config(db):
+    """
+    Add commission wallet ID to Lamassu configuration table for commission earnings.
+    """
+    await db.execute(
+        """
+        ALTER TABLE myextension.lamassu_config 
+        ADD COLUMN commission_wallet_id TEXT;
+        """
+    )

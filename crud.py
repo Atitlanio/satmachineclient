@@ -309,9 +309,9 @@ async def create_lamassu_config(data: CreateLamassuConfigData) -> LamassuConfig:
     await db.execute(
         """
         INSERT INTO myextension.lamassu_config 
-        (id, host, port, database_name, username, password, source_wallet_id, is_active, created_at, updated_at,
+        (id, host, port, database_name, username, password, source_wallet_id, commission_wallet_id, is_active, created_at, updated_at,
          use_ssh_tunnel, ssh_host, ssh_port, ssh_username, ssh_password, ssh_private_key)
-        VALUES (:id, :host, :port, :database_name, :username, :password, :source_wallet_id, :is_active, :created_at, :updated_at,
+        VALUES (:id, :host, :port, :database_name, :username, :password, :source_wallet_id, :commission_wallet_id, :is_active, :created_at, :updated_at,
                 :use_ssh_tunnel, :ssh_host, :ssh_port, :ssh_username, :ssh_password, :ssh_private_key)
         """,
         {
@@ -322,6 +322,7 @@ async def create_lamassu_config(data: CreateLamassuConfigData) -> LamassuConfig:
             "username": data.username,
             "password": data.password,
             "source_wallet_id": data.source_wallet_id,
+            "commission_wallet_id": data.commission_wallet_id,
             "is_active": True,
             "created_at": datetime.now(),
             "updated_at": datetime.now(),

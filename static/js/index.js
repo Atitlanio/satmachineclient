@@ -72,6 +72,7 @@ window.app = Vue.createApp({
           username: '',
           password: '',
           selectedWallet: null,
+          selectedCommissionWallet: null,
           // SSH Tunnel settings
           use_ssh_tunnel: false,
           ssh_host: '',
@@ -156,6 +157,20 @@ window.app = Vue.createApp({
           this.g.user.wallets[0].inkey
         )
         this.lamassuConfig = data
+        
+        // When opening config dialog, populate the selected wallets if they exist
+        if (data && data.source_wallet_id) {
+          const wallet = this.g.user.wallets.find(w => w.id === data.source_wallet_id)
+          if (wallet) {
+            this.configDialog.data.selectedWallet = wallet
+          }
+        }
+        if (data && data.commission_wallet_id) {
+          const commissionWallet = this.g.user.wallets.find(w => w.id === data.commission_wallet_id)
+          if (commissionWallet) {
+            this.configDialog.data.selectedCommissionWallet = commissionWallet
+          }
+        }
       } catch (error) {
         // It's OK if no config exists yet
         this.lamassuConfig = null
@@ -171,6 +186,7 @@ window.app = Vue.createApp({
           username: this.configDialog.data.username,
           password: this.configDialog.data.password,
           source_wallet_id: this.configDialog.data.selectedWallet?.id,
+          commission_wallet_id: this.configDialog.data.selectedCommissionWallet?.id,
           // SSH Tunnel settings
           use_ssh_tunnel: this.configDialog.data.use_ssh_tunnel,
           ssh_host: this.configDialog.data.ssh_host,
@@ -209,6 +225,7 @@ window.app = Vue.createApp({
         username: '',
         password: '',
         selectedWallet: null,
+        selectedCommissionWallet: null,
         // SSH Tunnel settings
         use_ssh_tunnel: false,
         ssh_host: '',

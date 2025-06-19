@@ -23,6 +23,7 @@ except ImportError:
 
 from lnbits.core.services import create_invoice, pay_invoice
 from lnbits.core.crud.wallets import get_wallet
+from lnbits.core.services import update_wallet_balance
 from lnbits.settings import settings
 
 from .crud import (
@@ -680,6 +681,31 @@ class LamassuTransactionProcessor:
             logger.error(f"Error sending DCA payment to client {client.username or client.user_id}: {e}")
             return False
     
+    async def credit_source_wallet(self, transaction: Dict[str, Any]) -> bool:
+        """Credit the source wallet with the full crypto_atoms amount from Lamassu transaction"""
+        try:
+            # Get the configuration to find source wallet
+            admin_config = await get_active_lamassu_config()
+            if not admin_config or not admin_config.source_wallet_id:
+                logger.error("No source wallet configured - cannot credit wallet")
+                return False
+            
+            crypto_atoms = transaction["crypto_amount"]  # Full amount including commission
+            transaction_id = transaction["transaction_id"]
+            
+            # Credit the source wallet with the full crypto_atoms amount
+            await update_wallet_balance(
+                wallet_id=admin_config.source_wallet_id,
+                amount=crypto_atoms * 1000  # Convert sats to millisats
+            )
+            
+            logger.info(f"Credited source wallet with {crypto_atoms} sats from transaction {transaction_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error crediting source wallet for transaction {transaction.get('transaction_id', 'unknown')}: {e}")
+            return False
+
     async def process_transaction(self, transaction: Dict[str, Any]) -> None:
         """Process a single transaction - calculate and distribute DCA payments"""
         try:
@@ -692,6 +718,12 @@ class LamassuTransactionProcessor:
                 return
             
             logger.info(f"Processing new transaction: {transaction_id}")
+            
+            # First, credit the source wallet with the full transaction amount
+            credit_success = await self.credit_source_wallet(transaction)
+            if not credit_success:
+                logger.error(f"Failed to credit source wallet for transaction {transaction_id} - skipping distribution")
+                return
             
             # Calculate distribution amounts
             distributions = await self.calculate_distribution_amounts(transaction)

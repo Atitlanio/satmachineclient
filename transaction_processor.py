@@ -400,7 +400,7 @@ class LamassuTransactionProcessor:
                             elif key in ['transaction_id', 'device_id', 'crypto_code', 'fiat_code']:
                                 processed_row[key] = str(value)
                             elif key in ['fiat_amount', 'crypto_amount']:
-                                processed_row[key] = int(value) if value else 0
+                                processed_row[key] = int(float(value)) if value else 0
                             elif key in ['commission_percentage', 'discount']:
                                 processed_row[key] = float(value) if value else 0.0
                             elif key == 'transaction_time':

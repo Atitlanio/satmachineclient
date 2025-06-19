@@ -12,7 +12,8 @@ from .models import (
     CreateDepositData, DcaDeposit, UpdateDepositStatusData,
     CreateDcaPaymentData, DcaPayment,
     ClientBalanceSummary,
-    CreateLamassuConfigData, LamassuConfig, UpdateLamassuConfigData
+    CreateLamassuConfigData, LamassuConfig, UpdateLamassuConfigData,
+    CreateLamassuTransactionData, StoredLamassuTransaction
 )
 
 db = Database("ext_myextension")
@@ -437,5 +438,90 @@ async def update_poll_success_time(config_id: str) -> None:
             "id": config_id,
             "poll_time": utc_now,
             "updated_at": utc_now
+        }
+    )
+
+
+# Lamassu Transaction Storage CRUD Operations
+async def create_lamassu_transaction(data: CreateLamassuTransactionData) -> StoredLamassuTransaction:
+    """Store a processed Lamassu transaction"""
+    transaction_id = urlsafe_short_hash()
+    await db.execute(
+        """
+        INSERT INTO myextension.lamassu_transactions 
+        (id, lamassu_transaction_id, fiat_amount, crypto_amount, commission_percentage, 
+         discount, effective_commission, commission_amount_sats, base_amount_sats, 
+         exchange_rate, crypto_code, fiat_code, device_id, transaction_time, processed_at,
+         clients_count, distributions_total_sats)
+        VALUES (:id, :lamassu_transaction_id, :fiat_amount, :crypto_amount, :commission_percentage,
+                :discount, :effective_commission, :commission_amount_sats, :base_amount_sats,
+                :exchange_rate, :crypto_code, :fiat_code, :device_id, :transaction_time, :processed_at,
+                :clients_count, :distributions_total_sats)
+        """,
+        {
+            "id": transaction_id,
+            "lamassu_transaction_id": data.lamassu_transaction_id,
+            "fiat_amount": data.fiat_amount,
+            "crypto_amount": data.crypto_amount,
+            "commission_percentage": data.commission_percentage,
+            "discount": data.discount,
+            "effective_commission": data.effective_commission,
+            "commission_amount_sats": data.commission_amount_sats,
+            "base_amount_sats": data.base_amount_sats,
+            "exchange_rate": data.exchange_rate,
+            "crypto_code": data.crypto_code,
+            "fiat_code": data.fiat_code,
+            "device_id": data.device_id,
+            "transaction_time": data.transaction_time,
+            "processed_at": datetime.now(),
+            "clients_count": 0,  # Will be updated after distributions
+            "distributions_total_sats": 0  # Will be updated after distributions
+        }
+    )
+    return await get_lamassu_transaction(transaction_id)
+
+
+async def get_lamassu_transaction(transaction_id: str) -> Optional[StoredLamassuTransaction]:
+    """Get a stored Lamassu transaction by ID"""
+    return await db.fetchone(
+        "SELECT * FROM myextension.lamassu_transactions WHERE id = :id",
+        {"id": transaction_id},
+        StoredLamassuTransaction,
+    )
+
+
+async def get_lamassu_transaction_by_lamassu_id(lamassu_transaction_id: str) -> Optional[StoredLamassuTransaction]:
+    """Get a stored Lamassu transaction by Lamassu transaction ID"""
+    return await db.fetchone(
+        "SELECT * FROM myextension.lamassu_transactions WHERE lamassu_transaction_id = :lamassu_id",
+        {"lamassu_id": lamassu_transaction_id},
+        StoredLamassuTransaction,
+    )
+
+
+async def get_all_lamassu_transactions() -> List[StoredLamassuTransaction]:
+    """Get all stored Lamassu transactions"""
+    return await db.fetchall(
+        "SELECT * FROM myextension.lamassu_transactions ORDER BY transaction_time DESC",
+        model=StoredLamassuTransaction,
+    )
+
+
+async def update_lamassu_transaction_distribution_stats(
+    transaction_id: str, 
+    clients_count: int, 
+    distributions_total_sats: int
+) -> None:
+    """Update distribution statistics for a Lamassu transaction"""
+    await db.execute(
+        """
+        UPDATE myextension.lamassu_transactions 
+        SET clients_count = :clients_count, distributions_total_sats = :distributions_total_sats 
+        WHERE id = :id
+        """,
+        {
+            "clients_count": clients_count,
+            "distributions_total_sats": distributions_total_sats,
+            "id": transaction_id
         }
     )

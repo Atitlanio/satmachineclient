@@ -102,6 +102,43 @@ class LamassuTransaction(BaseModel):
     timestamp: datetime
 
 
+# Lamassu Transaction Storage Models
+class CreateLamassuTransactionData(BaseModel):
+    lamassu_transaction_id: str
+    fiat_amount: int
+    crypto_amount: int
+    commission_percentage: float
+    discount: float = 0.0
+    effective_commission: float
+    commission_amount_sats: int
+    base_amount_sats: int
+    exchange_rate: float
+    crypto_code: str = "BTC"
+    fiat_code: str = "GTQ"
+    device_id: Optional[str] = None
+    transaction_time: datetime
+
+
+class StoredLamassuTransaction(BaseModel):
+    id: str
+    lamassu_transaction_id: str
+    fiat_amount: int
+    crypto_amount: int
+    commission_percentage: float
+    discount: float
+    effective_commission: float
+    commission_amount_sats: int
+    base_amount_sats: int
+    exchange_rate: float
+    crypto_code: str
+    fiat_code: str
+    device_id: Optional[str]
+    transaction_time: datetime
+    processed_at: datetime
+    clients_count: int  # Number of clients who received distributions
+    distributions_total_sats: int  # Total sats distributed to clients
+
+
 # Lamassu Configuration Models
 class CreateLamassuConfigData(BaseModel):
     host: str

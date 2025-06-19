@@ -35,9 +35,11 @@ from .crud import (
     update_config_test_result,
     update_poll_start_time,
     update_poll_success_time,
-    update_dca_payment_status
+    update_dca_payment_status,
+    create_lamassu_transaction,
+    update_lamassu_transaction_distribution_stats
 )
-from .models import CreateDcaPaymentData, LamassuTransaction, DcaClient
+from .models import CreateDcaPaymentData, LamassuTransaction, DcaClient, CreateLamassuTransactionData
 
 
 class LamassuTransactionProcessor:
@@ -746,6 +748,54 @@ class LamassuTransactionProcessor:
         except Exception as e:
             logger.error(f"Error updating payment status for {payment_id}: {e}")
 
+    async def store_lamassu_transaction(self, transaction: Dict[str, Any]) -> Optional[str]:
+        """Store the Lamassu transaction in our database for audit and UI"""
+        try:
+            # Extract and validate transaction data
+            crypto_atoms = transaction.get("crypto_amount", 0)
+            fiat_amount = transaction.get("fiat_amount", 0)
+            commission_percentage = transaction.get("commission_percentage") or 0.0
+            discount = transaction.get("discount") or 0.0
+            
+            # Calculate commission metrics
+            if commission_percentage > 0:
+                effective_commission = commission_percentage * (100 - discount) / 100
+                base_crypto_atoms = int(crypto_atoms / (1 + effective_commission))
+                commission_amount_sats = crypto_atoms - base_crypto_atoms
+            else:
+                effective_commission = 0.0
+                base_crypto_atoms = crypto_atoms
+                commission_amount_sats = 0
+            
+            # Calculate exchange rate
+            exchange_rate = base_crypto_atoms / fiat_amount if fiat_amount > 0 else 0
+            
+            # Create transaction data
+            transaction_data = CreateLamassuTransactionData(
+                lamassu_transaction_id=transaction["transaction_id"],
+                fiat_amount=fiat_amount,
+                crypto_amount=crypto_atoms,
+                commission_percentage=commission_percentage,
+                discount=discount,
+                effective_commission=effective_commission,
+                commission_amount_sats=commission_amount_sats,
+                base_amount_sats=base_crypto_atoms,
+                exchange_rate=exchange_rate,
+                crypto_code=transaction.get("crypto_code", "BTC"),
+                fiat_code=transaction.get("fiat_code", "GTQ"),
+                device_id=transaction.get("device_id"),
+                transaction_time=transaction.get("transaction_time")
+            )
+            
+            # Store in database
+            stored_transaction = await create_lamassu_transaction(transaction_data)
+            logger.info(f"Stored Lamassu transaction {transaction['transaction_id']} in database")
+            return stored_transaction.id
+            
+        except Exception as e:
+            logger.error(f"Error storing Lamassu transaction {transaction.get('transaction_id', 'unknown')}: {e}")
+            return None
+
     async def send_commission_payment(self, transaction: Dict[str, Any], commission_amount_sats: int) -> bool:
         """Send commission to the configured commission wallet"""
         try:
@@ -819,6 +869,9 @@ class LamassuTransactionProcessor:
                 logger.error(f"Failed to credit source wallet for transaction {transaction_id} - skipping distribution")
                 return
             
+            # Store the transaction in our database for audit and UI
+            stored_transaction = await self.store_lamassu_transaction(transaction)
+            
             # Calculate distribution amounts
             distributions = await self.calculate_distribution_amounts(transaction)
             
@@ -844,6 +897,16 @@ class LamassuTransactionProcessor:
             # Send commission to commission wallet (if configured)
             if commission_amount_sats > 0:
                 await self.send_commission_payment(transaction, commission_amount_sats)
+            
+            # Update distribution statistics in stored transaction
+            if stored_transaction:
+                clients_count = len(distributions)
+                distributions_total_sats = sum(dist["sats_amount"] for dist in distributions.values())
+                await update_lamassu_transaction_distribution_stats(
+                    stored_transaction, 
+                    clients_count, 
+                    distributions_total_sats
+                )
             
             logger.info(f"Successfully processed transaction {transaction_id}")
             

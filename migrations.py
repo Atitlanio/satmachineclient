@@ -212,3 +212,32 @@ async def m011_add_commission_wallet_to_lamassu_config(db):
         ADD COLUMN commission_wallet_id TEXT;
         """
     )
+
+
+async def m012_create_lamassu_transactions_table(db):
+    """
+    Create table to store processed Lamassu transactions for audit and UI display.
+    """
+    await db.execute(
+        f"""
+        CREATE TABLE myextension.lamassu_transactions (
+            id TEXT PRIMARY KEY NOT NULL,
+            lamassu_transaction_id TEXT NOT NULL UNIQUE,
+            fiat_amount INTEGER NOT NULL,
+            crypto_amount INTEGER NOT NULL,
+            commission_percentage REAL NOT NULL,
+            discount REAL NOT NULL DEFAULT 0.0,
+            effective_commission REAL NOT NULL,
+            commission_amount_sats INTEGER NOT NULL,
+            base_amount_sats INTEGER NOT NULL,
+            exchange_rate REAL NOT NULL,
+            crypto_code TEXT NOT NULL DEFAULT 'BTC',
+            fiat_code TEXT NOT NULL DEFAULT 'GTQ',
+            device_id TEXT,
+            transaction_time TIMESTAMP NOT NULL,
+            processed_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
+            clients_count INTEGER NOT NULL DEFAULT 0,
+            distributions_total_sats INTEGER NOT NULL DEFAULT 0
+        );
+        """
+    )

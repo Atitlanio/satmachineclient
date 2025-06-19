@@ -51,6 +51,11 @@
                     ${ col.value }
                   </q-badge>
                 </div>
+                <div v-else-if="col.field == 'remaining_balance'">
+                  <span :class="col.value > 0 ? 'text-green-8 text-weight-bold' : 'text-grey-6'">
+                    ${ formatCurrency(col.value || 0) }
+                  </span>
+                </div>
                 <div v-else-if="col.field == 'fixed_mode_daily_limit' && col.value">
                   ${ formatCurrency(col.value) }
                 </div>

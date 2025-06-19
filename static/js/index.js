@@ -15,6 +15,7 @@ window.app = Vue.createApp({
           { name: 'user_id', align: 'left', label: 'User ID', field: 'user_id' },
           { name: 'wallet_id', align: 'left', label: 'Wallet ID', field: 'wallet_id' },
           { name: 'dca_mode', align: 'left', label: 'DCA Mode', field: 'dca_mode' },
+          { name: 'remaining_balance', align: 'right', label: 'Remaining Balance', field: 'remaining_balance' },
           { name: 'fixed_mode_daily_limit', align: 'left', label: 'Daily Limit', field: 'fixed_mode_daily_limit' },
           { name: 'status', align: 'left', label: 'Status', field: 'status' }
         ],
@@ -245,7 +246,31 @@ window.app = Vue.createApp({
           '/myextension/api/v1/dca/clients',
           this.g.user.wallets[0].inkey
         )
-        this.dcaClients = data
+        
+        // Fetch balance data for each client
+        const clientsWithBalances = await Promise.all(
+          data.map(async (client) => {
+            try {
+              const { data: balance } = await LNbits.api.request(
+                'GET',
+                `/myextension/api/v1/dca/clients/${client.id}/balance`,
+                this.g.user.wallets[0].inkey
+              )
+              return {
+                ...client,
+                remaining_balance: balance.remaining_balance
+              }
+            } catch (error) {
+              console.error(`Error fetching balance for client ${client.id}:`, error)
+              return {
+                ...client,
+                remaining_balance: 0
+              }
+            }
+          })
+        )
+        
+        this.dcaClients = clientsWithBalances
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       }
@@ -508,6 +533,7 @@ window.app = Vue.createApp({
         })
         
         // Refresh data
+        await this.getDcaClients() // Refresh to show updated balances
         await this.getDeposits()
         await this.getLamassuConfig()
       } catch (error) {
@@ -558,6 +584,7 @@ window.app = Vue.createApp({
         })
         
         // Refresh data
+        await this.getDcaClients() // Refresh to show updated balances
         await this.getDeposits()
         await this.getLamassuConfig()
         

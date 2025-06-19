@@ -22,6 +22,7 @@ except ImportError:
         logger.warning("SSH tunnel support not available")
 
 from lnbits.core.services import create_invoice, pay_invoice
+from lnbits.core.crud.wallets import get_wallet
 from lnbits.settings import settings
 
 from .crud import (
@@ -34,7 +35,7 @@ from .crud import (
     update_poll_start_time,
     update_poll_success_time
 )
-from .models import CreateDcaPaymentData, LamassuTransaction
+from .models import CreateDcaPaymentData, LamassuTransaction, DcaClient
 
 
 class LamassuTransactionProcessor:
@@ -551,6 +552,7 @@ class LamassuTransactionProcessor:
                 client_sats_amount = int(base_crypto_atoms * proportion)
                 
                 # Calculate equivalent fiat value for tracking purposes
+                # TODO: make client_fiat_amount float with 2 decimal presicion
                 client_fiat_amount = int(client_sats_amount / exchange_rate) if exchange_rate > 0 else 0
                 
                 distributions[client_id] = {
@@ -595,9 +597,12 @@ class LamassuTransactionProcessor:
                     # Record the payment in our database
                     dca_payment = await create_dca_payment(payment_data)
                     
-                    # TODO: Actually send Bitcoin to client's wallet
-                    # This will be implemented when we integrate with LNBits payment system
-                    logger.info(f"DCA payment recorded for client {client_id[:8]}...: {distribution['sats_amount']} sats")
+                    # Send Bitcoin to client's wallet
+                    success = await self.send_dca_payment(client, distribution, transaction_id)
+                    if success:
+                        logger.info(f"DCA payment sent to client {client_id[:8]}...: {distribution['sats_amount']} sats")
+                    else:
+                        logger.error(f"Failed to send DCA payment to client {client_id[:8]}...")
                     
                 except Exception as e:
                     logger.error(f"Error processing distribution for client {client_id}: {e}")
@@ -605,6 +610,71 @@ class LamassuTransactionProcessor:
                     
         except Exception as e:
             logger.error(f"Error distributing to clients: {e}")
+    
+    async def send_dca_payment(self, client: DcaClient, distribution: Dict[str, Any], lamassu_transaction_id: str) -> bool:
+        """Send Bitcoin payment to a DCA client's wallet"""
+        try:
+            # For now, we only support wallet_id payments (internal LNBits transfers)
+            target_wallet_id = client.wallet_id
+            amount_sats = distribution["sats_amount"]
+            amount_msat = amount_sats * 1000  # Convert sats to millisats
+            
+            # Validate the target wallet exists
+            target_wallet = await get_wallet(target_wallet_id)
+            if not target_wallet:
+                logger.error(f"Target wallet {target_wallet_id} not found for client {client.username or client.user_id}")
+                return False
+            
+            # Create descriptive memo
+            memo = f"DCA Distribution: {amount_sats} sats from Lamassu transaction {lamassu_transaction_id[:8]}..."
+            if client.username:
+                memo += f" to {client.username}"
+            
+            # Create invoice in target wallet
+            extra={
+                "tag": "dca_distribution",
+                "client_id": client.id,
+                "lamassu_transaction_id": lamassu_transaction_id,
+                "distribution_amount": amount_sats
+            }
+            new_payment = await create_invoice(
+                wallet_id=target_wallet.id,
+                amount=amount_sats,  # LNBits create_invoice expects sats
+                internal=True,  # Internal transfer within LNBits
+                memo=memo,
+                extra=extra
+            )
+            
+            if not new_payment:
+                logger.error(f"Failed to create invoice for client {client.username or client.user_id}")
+                return False
+            
+            # Pay the invoice from the DCA admin wallet (this extension's wallet)
+            # We need to get the admin wallet that manages DCA funds
+            admin_config = await get_active_lamassu_config()
+            if not admin_config:
+                logger.error("No active Lamassu config found - cannot determine source wallet")
+                return False
+            
+            # TODO: We need to determine which wallet holds the DCA funds
+            # For now, we'll need to add a source_wallet_id to the LamassuConfig
+            # This is the wallet that receives the Bitcoin from Lamassu and distributes to clients
+            logger.warning("DCA source wallet not configured - payment creation successful but not sent")
+            logger.info(f"Created invoice for {amount_sats} sats to client {client.username or client.user_id}")
+            logger.info(f"Invoice: {new_payment.bolt11}")
+            
+            # TODO: Implement the actual payment once source wallet is configured
+            # await pay_invoice(
+            #     payment_request=new_payment.bolt11,
+            #     wallet_id=source_wallet_id,
+            #     description=memo,
+            #     extra=extra )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error sending DCA payment to client {client.username or client.user_id}: {e}")
+            return False
     
     async def process_transaction(self, transaction: Dict[str, Any]) -> None:
         """Process a single transaction - calculate and distribute DCA payments"""

@@ -631,10 +631,17 @@ class LamassuTransactionProcessor:
                 logger.error(f"Target wallet {target_wallet_id} not found for client {client.username or client.user_id}")
                 return False
             
-            # Create descriptive memo
-            memo = f"DCA Distribution: {amount_sats} sats from Lamassu transaction {lamassu_transaction_id[:8]}..."
-            if client.username:
-                memo += f" to {client.username}"
+            # Create descriptive memo with DCA metrics
+            fiat_amount = distribution.get("fiat_amount", 0)
+            exchange_rate = distribution.get("exchange_rate", 0)
+            
+            # Calculate cost basis (fiat per BTC)
+            if exchange_rate > 0:
+                # exchange_rate is sats per fiat unit, so convert to fiat per BTC
+                cost_basis_per_btc = 100_000_000 / exchange_rate  # 100M sats = 1 BTC
+                memo = f"DCA: {amount_sats:,} sats • {fiat_amount:,} GTQ • Cost basis: {cost_basis_per_btc:,.2f} GTQ/BTC"
+            else:
+                memo = f"DCA: {amount_sats:,} sats • {fiat_amount:,} GTQ"
             
             # Create invoice in target wallet
             extra={
@@ -740,8 +747,10 @@ class LamassuTransactionProcessor:
             
             transaction_id = transaction["transaction_id"]
             
-            # Create invoice in commission wallet
-            commission_memo = f"Commission: {commission_amount_sats} sats from Lamassu transaction {transaction_id[:8]}..."
+            # Create invoice in commission wallet with DCA metrics
+            fiat_amount = transaction.get("fiat_amount", 0)
+            commission_percentage = transaction.get("commission_percentage", 0) * 100  # Convert to percentage
+            commission_memo = f"DCA Commission: {commission_amount_sats:,} sats • {commission_percentage:.1f}% • {fiat_amount:,} GTQ transaction"
             
             commission_payment = await create_invoice(
                 wallet_id=admin_config.commission_wallet_id,

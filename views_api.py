@@ -35,6 +35,9 @@ from .crud import (
     update_lamassu_config,
     update_config_test_result,
     delete_lamassu_config,
+    # Lamassu transaction CRUD operations
+    get_all_lamassu_transactions,
+    get_lamassu_transaction
 )
 from .helpers import lnurler
 from .models import (
@@ -43,7 +46,8 @@ from .models import (
     CreateDcaClientData, DcaClient, UpdateDcaClientData,
     CreateDepositData, DcaDeposit, UpdateDepositStatusData,
     ClientBalanceSummary,
-    CreateLamassuConfigData, LamassuConfig, UpdateLamassuConfigData
+    CreateLamassuConfigData, LamassuConfig, UpdateLamassuConfigData,
+    StoredLamassuTransaction
 )
 
 myextension_api_router = APIRouter()
@@ -448,6 +452,66 @@ async def api_test_transaction(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=f"Error processing test transaction: {str(e)}"
         )
+
+
+# Lamassu Transaction Endpoints
+
+@myextension_api_router.get("/api/v1/dca/transactions")
+async def api_get_lamassu_transactions(
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> list[StoredLamassuTransaction]:
+    """Get all processed Lamassu transactions"""
+    return await get_all_lamassu_transactions()
+
+
+@myextension_api_router.get("/api/v1/dca/transactions/{transaction_id}")
+async def api_get_lamassu_transaction(
+    transaction_id: str,
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> StoredLamassuTransaction:
+    """Get a specific Lamassu transaction with details"""
+    transaction = await get_lamassu_transaction(transaction_id)
+    if not transaction:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Lamassu transaction not found."
+        )
+    return transaction
+
+
+@myextension_api_router.get("/api/v1/dca/transactions/{transaction_id}/distributions")
+async def api_get_transaction_distributions(
+    transaction_id: str,
+    wallet: WalletTypeInfo = Depends(require_invoice_key),
+) -> list[dict]:
+    """Get distribution details for a specific Lamassu transaction"""
+    # Get the stored transaction
+    transaction = await get_lamassu_transaction(transaction_id)
+    if not transaction:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Lamassu transaction not found."
+        )
+    
+    # Get all DCA payments for this Lamassu transaction
+    from .crud import get_payments_by_lamassu_transaction, get_dca_client
+    payments = await get_payments_by_lamassu_transaction(transaction.lamassu_transaction_id)
+    
+    # Enhance payments with client information
+    distributions = []
+    for payment in payments:
+        client = await get_dca_client(payment.client_id)
+        distributions.append({
+            "payment_id": payment.id,
+            "client_id": payment.client_id,
+            "client_username": client.username if client else None,
+            "client_user_id": client.user_id if client else None,
+            "amount_sats": payment.amount_sats,
+            "amount_fiat": payment.amount_fiat,
+            "exchange_rate": payment.exchange_rate,
+            "status": payment.status,
+            "created_at": payment.created_at
+        })
+    
+    return distributions
 
 
 # Lamassu Configuration Endpoints

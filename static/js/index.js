@@ -7,6 +7,7 @@ window.app = Vue.createApp({
       // DCA Admin Data
       dcaClients: [],
       deposits: [],
+      lamassuTransactions: [],
 
       // Table configurations
       clientsTable: {
@@ -36,6 +37,30 @@ window.app = Vue.createApp({
           rowsPerPage: 10
         }
       },
+      lamassuTransactionsTable: {
+        columns: [
+          { name: 'lamassu_transaction_id', align: 'left', label: 'Transaction ID', field: 'lamassu_transaction_id' },
+          { name: 'transaction_time', align: 'left', label: 'Time', field: 'transaction_time' },
+          { name: 'fiat_amount', align: 'right', label: 'Fiat Amount', field: 'fiat_amount' },
+          { name: 'crypto_amount', align: 'right', label: 'Total Sats', field: 'crypto_amount' },
+          { name: 'commission_amount_sats', align: 'right', label: 'Commission', field: 'commission_amount_sats' },
+          { name: 'base_amount_sats', align: 'right', label: 'Base Amount', field: 'base_amount_sats' },
+          { name: 'distributions_total_sats', align: 'right', label: 'Distributed', field: 'distributions_total_sats' },
+          { name: 'clients_count', align: 'center', label: 'Clients', field: 'clients_count' }
+        ],
+        pagination: {
+          rowsPerPage: 10
+        }
+      },
+      distributionDetailsTable: {
+        columns: [
+          { name: 'client_username', align: 'left', label: 'Client', field: 'client_username' },
+          { name: 'amount_sats', align: 'right', label: 'Amount (sats)', field: 'amount_sats' },
+          { name: 'amount_fiat', align: 'right', label: 'Amount (fiat)', field: 'amount_fiat' },
+          { name: 'status', align: 'center', label: 'Status', field: 'status' },
+          { name: 'created_at', align: 'left', label: 'Created', field: 'created_at' }
+        ]
+      },
 
       // Dialog states  
       depositFormDialog: {
@@ -48,6 +73,11 @@ window.app = Vue.createApp({
         show: false,
         data: null,
         balance: null
+      },
+      distributionDialog: {
+        show: false,
+        transaction: null,
+        distributions: []
       },
 
       // Quick deposit form
@@ -142,6 +172,11 @@ window.app = Vue.createApp({
       if (!dateString) return ''
       const date = new Date(dateString)
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString('en-US', { hour12: false })
+    },
+
+    formatSats(amount) {
+      if (!amount) return '0 sats'
+      return new Intl.NumberFormat('en-US').format(amount) + ' sats'
     },
 
     getClientUsername(clientId) {
@@ -468,6 +503,10 @@ window.app = Vue.createApp({
     async exportDepositsCSV() {
       await LNbits.utils.exportCSV(this.depositsTable.columns, this.deposits)
     },
+
+    async exportLamassuTransactionsCSV() {
+      await LNbits.utils.exportCSV(this.lamassuTransactionsTable.columns, this.lamassuTransactions)
+    },
     
     // Polling Methods
     async testDatabaseConnection() {
@@ -535,6 +574,7 @@ window.app = Vue.createApp({
         // Refresh data
         await this.getDcaClients() // Refresh to show updated balances
         await this.getDeposits()
+        await this.getLamassuTransactions()
         await this.getLamassuConfig()
       } catch (error) {
         LNbits.utils.notifyApiError(error)
@@ -586,12 +626,43 @@ window.app = Vue.createApp({
         // Refresh data
         await this.getDcaClients() // Refresh to show updated balances
         await this.getDeposits()
+        await this.getLamassuTransactions()
         await this.getLamassuConfig()
         
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       } finally {
         this.runningTestTransaction = false
+      }
+    },
+
+    // Lamassu Transaction Methods
+    async getLamassuTransactions() {
+      try {
+        const { data } = await LNbits.api.request(
+          'GET',
+          '/myextension/api/v1/dca/transactions',
+          this.g.user.wallets[0].inkey
+        )
+        this.lamassuTransactions = data
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
+    },
+
+    async viewTransactionDistributions(transaction) {
+      try {
+        const { data: distributions } = await LNbits.api.request(
+          'GET',
+          `/myextension/api/v1/dca/transactions/${transaction.id}/distributions`,
+          this.g.user.wallets[0].inkey
+        )
+        
+        this.distributionDialog.transaction = transaction
+        this.distributionDialog.distributions = distributions
+        this.distributionDialog.show = true
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
       }
     },
 
@@ -792,7 +863,8 @@ window.app = Vue.createApp({
     await Promise.all([
       this.getLamassuConfig(),
       this.getDcaClients(),
-      this.getDeposits()
+      this.getDeposits(),
+      this.getLamassuTransactions()
     ])
 
     // Legacy data loading

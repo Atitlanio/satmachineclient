@@ -213,6 +213,58 @@
       </q-card-section>
     </q-card>
 
+    <!-- Lamassu Transactions Section -->
+    <q-card>
+      <q-card-section>
+        <div class="row items-center no-wrap q-mb-md">
+          <div class="col">
+            <h6 class="text-subtitle2 q-my-none">Processed Lamassu Transactions</h6>
+            <p class="text-caption q-my-none">ATM transactions processed through DCA distribution</p>
+          </div>
+          <div class="col-auto">
+            <q-btn flat color="grey" @click="exportLamassuTransactionsCSV">Export to CSV</q-btn>
+          </div>
+        </div>
+        <q-table
+          dense
+          flat
+          :rows="lamassuTransactions"
+          row-key="id"
+          :columns="lamassuTransactionsTable.columns"
+          v-model:pagination="lamassuTransactionsTable.pagination"
+        >
+          <template v-slot:body="props">
+            <q-tr :props="props" class="cursor-pointer" @click="viewTransactionDistributions(props.row)">
+              <q-td v-for="col in props.cols" :key="col.name" :props="props">
+                <div v-if="col.field == 'lamassu_transaction_id'">${ col.value }</div>
+                <div v-else-if="col.field == 'fiat_amount'">${ formatCurrency(col.value) }</div>
+                <div v-else-if="col.field == 'crypto_amount'">${ formatSats(col.value) }</div>
+                <div v-else-if="col.field == 'commission_amount_sats'">${ formatSats(col.value) }</div>
+                <div v-else-if="col.field == 'base_amount_sats'">${ formatSats(col.value) }</div>
+                <div v-else-if="col.field == 'distributions_total_sats'">${ formatSats(col.value) }</div>
+                <div v-else-if="col.field == 'commission_percentage'">${ (col.value * 100).toFixed(1) }%</div>
+                <div v-else-if="col.field == 'effective_commission'">${ (col.value * 100).toFixed(1) }%</div>
+                <div v-else-if="col.field == 'discount'">${ col.value }%</div>
+                <div v-else-if="col.field == 'exchange_rate'">${ col.value.toLocaleString() }</div>
+                <div v-else-if="col.field == 'transaction_time'">${ formatDateTime(col.value) }</div>
+                <div v-else-if="col.field == 'processed_at'">${ formatDateTime(col.value) }</div>
+                <div v-else>${ col.value || '-' }</div>
+              </q-td>
+              <q-td auto-width>
+                <q-btn
+                  flat dense size="sm" icon="visibility"
+                  color="primary"
+                  @click.stop="viewTransactionDistributions(props.row)"
+                >
+                  <q-tooltip>View Distribution Details</q-tooltip>
+                </q-btn>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+
     <q-card>
       <q-card-section>
         <div class="row items-center no-wrap q-mb-md">
@@ -704,6 +756,101 @@
           >
         </div>
       </q-form>
+    </q-card>
+  </q-dialog>
+
+  <!--/////////////////////////////////////////////////-->
+  <!--//////////////TRANSACTION DISTRIBUTIONS DIALOG////-->
+  <!--/////////////////////////////////////////////////-->
+
+  <q-dialog v-model="distributionDialog.show" position="top" maximized>
+    <q-card class="q-pa-lg">
+      <div class="text-h6 q-mb-md">Transaction Distribution Details</div>
+      
+      <div v-if="distributionDialog.transaction" class="q-mb-lg">
+        <q-list>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Lamassu Transaction ID</q-item-label>
+              <q-item-label>${ distributionDialog.transaction.lamassu_transaction_id }</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Transaction Time</q-item-label>
+              <q-item-label>${ formatDateTime(distributionDialog.transaction.transaction_time) }</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Total Amount</q-item-label>
+              <q-item-label>
+                ${ formatCurrency(distributionDialog.transaction.fiat_amount) } 
+                (${ formatSats(distributionDialog.transaction.crypto_amount) })
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Commission</q-item-label>
+              <q-item-label>
+                ${ (distributionDialog.transaction.commission_percentage * 100).toFixed(1) }% 
+                <span v-if="distributionDialog.transaction.discount > 0">
+                  (with ${ distributionDialog.transaction.discount }% discount = ${ (distributionDialog.transaction.effective_commission * 100).toFixed(1) }% effective)
+                </span>
+                = ${ formatSats(distributionDialog.transaction.commission_amount_sats) }
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Available for Distribution</q-item-label>
+              <q-item-label>${ formatSats(distributionDialog.transaction.base_amount_sats) }</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Total Distributed</q-item-label>
+              <q-item-label>${ formatSats(distributionDialog.transaction.distributions_total_sats) } to ${ distributionDialog.transaction.clients_count } clients</q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </div>
+      
+      <q-separator class="q-my-md"></q-separator>
+      
+      <div class="text-h6 q-mb-md">Client Distributions</div>
+      
+      <q-table
+        dense
+        flat
+        :rows="distributionDialog.distributions"
+        row-key="payment_id"
+        :columns="distributionDetailsTable.columns"
+      >
+        <template v-slot:body="props">
+          <q-tr :props="props">
+            <q-td v-for="col in props.cols" :key="col.name" :props="props">
+              <div v-if="col.field == 'client_username'">${ col.value || 'No username' }</div>
+              <div v-else-if="col.field == 'client_user_id'">${ col.value.substring(0, 8) }...</div>
+              <div v-else-if="col.field == 'amount_sats'">${ formatSats(col.value) }</div>
+              <div v-else-if="col.field == 'amount_fiat'">${ formatCurrency(col.value) }</div>
+              <div v-else-if="col.field == 'exchange_rate'">${ col.value.toLocaleString() }</div>
+              <div v-else-if="col.field == 'status'">
+                <q-badge :color="col.value === 'confirmed' ? 'green' : col.value === 'failed' ? 'red' : 'orange'">
+                  ${ col.value }
+                </q-badge>
+              </div>
+              <div v-else-if="col.field == 'created_at'">${ formatDateTime(col.value) }</div>
+              <div v-else>${ col.value || '-' }</div>
+            </q-td>
+          </q-tr>
+        </template>
+      </q-table>
+      
+      <div class="row q-mt-lg">
+        <q-btn v-close-popup flat color="grey" class="q-ml-auto">Close</q-btn>
+      </div>
     </q-card>
   </q-dialog>
 

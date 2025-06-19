@@ -503,11 +503,25 @@ class LamassuTransactionProcessor:
                 logger.info("No Flow Mode clients found - skipping distribution")
                 return {}
             
-            # Extract transaction details
-            crypto_atoms = transaction["crypto_amount"]  # Total sats with commission baked in
-            fiat_amount = transaction["fiat_amount"]     # Actual fiat dispensed (principal only)
-            commission_percentage = transaction["commission_percentage"]  # Already stored as decimal (e.g., 0.045)
-            discount = transaction.get("discount", 0.0)  # Discount percentage
+            # Extract transaction details with None-safe defaults
+            crypto_atoms = transaction.get("crypto_amount")  # Total sats with commission baked in
+            fiat_amount = transaction.get("fiat_amount")     # Actual fiat dispensed (principal only)
+            commission_percentage = transaction.get("commission_percentage")  # Already stored as decimal (e.g., 0.045)
+            discount = transaction.get("discount")  # Discount percentage
+            
+            # Validate required fields
+            if crypto_atoms is None:
+                logger.error(f"Missing crypto_amount in transaction: {transaction}")
+                return {}
+            if fiat_amount is None:
+                logger.error(f"Missing fiat_amount in transaction: {transaction}")
+                return {}
+            if commission_percentage is None:
+                logger.warning(f"Missing commission_percentage in transaction: {transaction}, defaulting to 0")
+                commission_percentage = 0.0
+            if discount is None:
+                logger.info(f"Missing discount in transaction: {transaction}, defaulting to 0")
+                discount = 0.0
             
             # Calculate effective commission percentage after discount (following the reference logic)
             if commission_percentage > 0:
@@ -813,11 +827,11 @@ class LamassuTransactionProcessor:
                 return
             
             # Calculate commission amount for sending to commission wallet
-            crypto_atoms = transaction["crypto_amount"]
-            commission_percentage = transaction["commission_percentage"]
-            discount = transaction.get("discount", 0.0)
+            crypto_atoms = transaction.get("crypto_amount", 0)
+            commission_percentage = transaction.get("commission_percentage") or 0.0
+            discount = transaction.get("discount") or 0.0
             
-            if commission_percentage > 0:
+            if commission_percentage and commission_percentage > 0:
                 effective_commission = commission_percentage * (100 - discount) / 100
                 base_crypto_atoms = int(crypto_atoms / (1 + effective_commission))
                 commission_amount_sats = crypto_atoms - base_crypto_atoms

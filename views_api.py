@@ -390,6 +390,66 @@ async def api_manual_poll(
         )
 
 
+@myextension_api_router.post("/api/v1/dca/test-transaction")
+async def api_test_transaction(
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+    crypto_atoms: int = 103,
+    commission_percentage: float = 0.03,
+    discount: float = 0.0,
+) -> dict:
+    """Test transaction processing with simulated Lamassu transaction data"""
+    try:
+        from .transaction_processor import transaction_processor
+        import uuid
+        from datetime import datetime, timezone
+        
+        # Create a mock transaction that mimics Lamassu database structure
+        mock_transaction = {
+            "transaction_id": str(uuid.uuid4())[:8],  # Short ID for testing
+            "crypto_amount": crypto_atoms,  # Total sats including commission
+            "fiat_amount": 100,  # Mock fiat amount (100 centavos = 1 GTQ)
+            "commission_percentage": commission_percentage,  # Already as decimal
+            "discount": discount,
+            "transaction_time": datetime.now(timezone.utc),
+            "crypto_code": "BTC",
+            "fiat_code": "GTQ",
+            "device_id": "test_device",
+            "status": "confirmed"
+        }
+        
+        # Process the mock transaction through the complete DCA flow
+        await transaction_processor.process_transaction(mock_transaction)
+        
+        # Calculate commission for response
+        if commission_percentage > 0:
+            effective_commission = commission_percentage * (100 - discount) / 100
+            base_crypto_atoms = int(crypto_atoms / (1 + effective_commission))
+            commission_amount_sats = crypto_atoms - base_crypto_atoms
+        else:
+            base_crypto_atoms = crypto_atoms
+            commission_amount_sats = 0
+        
+        return {
+            "success": True,
+            "message": "Test transaction processed successfully",
+            "transaction_details": {
+                "transaction_id": mock_transaction["transaction_id"],
+                "total_amount_sats": crypto_atoms,
+                "base_amount_sats": base_crypto_atoms,
+                "commission_amount_sats": commission_amount_sats,
+                "commission_percentage": commission_percentage * 100,  # Show as percentage
+                "effective_commission": effective_commission * 100 if commission_percentage > 0 else 0,
+                "discount": discount
+            }
+        }
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Error processing test transaction: {str(e)}"
+        )
+
+
 # Lamassu Configuration Endpoints
 
 @myextension_api_router.get("/api/v1/dca/config")

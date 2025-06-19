@@ -60,6 +60,7 @@ window.app = Vue.createApp({
       lastPollTime: null,
       testingConnection: false,
       runningManualPoll: false,
+      runningTestTransaction: false,
       lamassuConfig: null,
       
       // Config dialog
@@ -513,6 +514,57 @@ window.app = Vue.createApp({
         LNbits.utils.notifyApiError(error)
       } finally {
         this.runningManualPoll = false
+      }
+    },
+    
+    async testTransaction() {
+      this.runningTestTransaction = true
+      try {
+        const {data} = await LNbits.api.request(
+          'POST',
+          '/myextension/api/v1/dca/test-transaction',
+          this.g.user.wallets[0].adminkey
+        )
+        
+        // Show detailed results in a dialog
+        const details = data.transaction_details
+        
+        let dialogContent = `<strong>Test Transaction Results</strong><br/><br/>`
+        dialogContent += `<strong>Transaction ID:</strong> ${details.transaction_id}<br/>`
+        dialogContent += `<strong>Total Amount:</strong> ${details.total_amount_sats} sats<br/>`
+        dialogContent += `<strong>Base Amount:</strong> ${details.base_amount_sats} sats<br/>`
+        dialogContent += `<strong>Commission:</strong> ${details.commission_amount_sats} sats (${details.commission_percentage}%)<br/>`
+        if (details.discount > 0) {
+          dialogContent += `<strong>Discount:</strong> ${details.discount}%<br/>`
+          dialogContent += `<strong>Effective Commission:</strong> ${details.effective_commission}%<br/>`
+        }
+        dialogContent += `<br/><strong>Check your wallets to see the distributions!</strong>`
+        
+        this.$q.dialog({
+          title: 'Test Transaction Completed',
+          message: dialogContent,
+          html: true,
+          ok: {
+            color: 'positive',
+            label: 'Great!'
+          }
+        })
+        
+        // Also show a brief notification
+        this.$q.notify({
+          type: 'positive',
+          message: `Test transaction processed: ${details.total_amount_sats} sats distributed`,
+          timeout: 5000
+        })
+        
+        // Refresh data
+        await this.getDeposits()
+        await this.getLamassuConfig()
+        
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      } finally {
+        this.runningTestTransaction = false
       }
     },
 

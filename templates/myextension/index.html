@@ -383,6 +383,16 @@
                 >
                   Manual Poll
                 </q-btn>
+                <q-btn 
+                  v-if="lamassuConfig && lamassuConfig.source_wallet_id"
+                  size="sm" 
+                  color="warning" 
+                  @click="testTransaction" 
+                  :loading="runningTestTransaction"
+                  class="q-ml-sm"
+                >
+                  Test Transaction
+                </q-btn>
               </div>
             </q-card-section>
           </q-expansion-item>

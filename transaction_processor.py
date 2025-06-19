@@ -444,12 +444,14 @@ class LamassuTransactionProcessor:
             time_threshold_str = time_threshold.strftime('%Y-%m-%d %H:%M:%S UTC')
             
             # First, get all transactions since the threshold from Lamassu database
+            # Filter out unconfirmed dispenses
+            # TODO: review
             lamassu_query = f"""
             SELECT 
                 co.id as transaction_id,
                 co.fiat as fiat_amount,
                 co.crypto_atoms as crypto_amount,
-                co.created as transaction_time,
+                co.confirmed_at as transaction_time,
                 co.device_id,
                 co.status,
                 co.commission_percentage,
@@ -457,9 +459,11 @@ class LamassuTransactionProcessor:
                 co.crypto_code,
                 co.fiat_code
             FROM cash_out_txs co
-            WHERE co.created > '{time_threshold_str}'
-                AND co.status = 'confirmed'
-            ORDER BY co.created DESC
+            WHERE co.confirmed_at > '{time_threshold_str}'
+                AND co.status IN ('confirmed', 'authorized')
+                AND co.dispense = 't'
+                AND co.dispense_confirmed = 't'
+            ORDER BY co.confirmed_at DESC
             """
             
             all_transactions = await self.execute_ssh_query(db_config, lamassu_query)

@@ -34,7 +34,8 @@ from .crud import (
     get_active_lamassu_config,
     update_config_test_result,
     update_poll_start_time,
-    update_poll_success_time
+    update_poll_success_time,
+    update_dca_payment_status
 )
 from .models import CreateDcaPaymentData, LamassuTransaction, DcaClient
 
@@ -601,8 +602,12 @@ class LamassuTransactionProcessor:
                     # Send Bitcoin to client's wallet
                     success = await self.send_dca_payment(client, distribution, transaction_id)
                     if success:
+                        # Update payment status to confirmed after successful payment
+                        await self.update_payment_status(dca_payment.id, "confirmed")
                         logger.info(f"DCA payment sent to client {client_id[:8]}...: {distribution['sats_amount']} sats")
                     else:
+                        # Update payment status to failed if payment failed
+                        await self.update_payment_status(dca_payment.id, "failed")
                         logger.error(f"Failed to send DCA payment to client {client_id[:8]}...")
                     
                 except Exception as e:
@@ -693,10 +698,16 @@ class LamassuTransactionProcessor:
             crypto_atoms = transaction["crypto_amount"]  # Full amount including commission
             transaction_id = transaction["transaction_id"]
             
+            # Get the source wallet object
+            source_wallet = await get_wallet(admin_config.source_wallet_id)
+            if not source_wallet:
+                logger.error(f"Source wallet {admin_config.source_wallet_id} not found")
+                return False
+            
             # Credit the source wallet with the full crypto_atoms amount
             await update_wallet_balance(
-                wallet_id=admin_config.source_wallet_id,
-                amount=crypto_atoms * 1000  # Convert sats to millisats
+                wallet=source_wallet,
+                amount=crypto_atoms  # Function expects sats, not millisats
             )
             
             logger.info(f"Credited source wallet with {crypto_atoms} sats from transaction {transaction_id}")
@@ -705,6 +716,14 @@ class LamassuTransactionProcessor:
         except Exception as e:
             logger.error(f"Error crediting source wallet for transaction {transaction.get('transaction_id', 'unknown')}: {e}")
             return False
+
+    async def update_payment_status(self, payment_id: str, status: str) -> None:
+        """Update the status of a DCA payment"""
+        try:
+            await update_dca_payment_status(payment_id, status)
+            logger.info(f"Updated payment {payment_id[:8]}... status to {status}")
+        except Exception as e:
+            logger.error(f"Error updating payment status for {payment_id}: {e}")
 
     async def send_commission_payment(self, transaction: Dict[str, Any], commission_amount_sats: int) -> bool:
         """Send commission to the configured commission wallet"""

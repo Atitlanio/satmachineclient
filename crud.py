@@ -238,6 +238,14 @@ async def get_all_payments() -> List[DcaPayment]:
     )
 
 
+async def update_dca_payment_status(payment_id: str, status: str) -> None:
+    """Update the status of a DCA payment"""
+    await db.execute(
+        "UPDATE myextension.dca_payments SET status = :status WHERE id = :id",
+        {"status": status, "id": payment_id}
+    )
+
+
 async def get_payments_by_lamassu_transaction(lamassu_transaction_id: str) -> List[DcaPayment]:
     return await db.fetchall(
         "SELECT * FROM myextension.dca_payments WHERE lamassu_transaction_id = :transaction_id",

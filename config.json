@@ -1,38 +1,32 @@
 {
-  "name": "MyExtension",
-  "short_description": "Minimal extension to build on",
+  "name": "DCA Admin",
+  "short_description": "Dollar Cost Averaging administration for Lamassu ATM integration",
   "tile": "/myextension/static/image/myextension.png",
   "min_lnbits_version": "1.0.0",
   "contributors": [
     {
-      "name": "Alan Bits",
-      "uri": "https://github.com/alanbits",
-      "role": "Lead dev"
+      "name": "Atitlan Community",
+      "uri": "https://atitlan.io",
+      "role": "R&D Venue"
     },
     {
-      "name": "Ben Arc",
-      "uri": "https://github.com/arcbtc",
-      "role": "Dev"
+      "name": "AtitlanIO",
+      "uri": "https://atitlan.io",
+      "role": "Developer"
     },
     {
-      "name": "LNbits community",
-      "uri": "https://t.me/lnbits",
-      "role": "Emotional support"
+      "name": "LNbits",
+      "uri": "https://github.com/lnbits",
+      "role": "Developer"
+    },
+    {
+      "name": "Claude",
+      "uri": "https://claude.ai",
+      "role": "Code Writing Agent"
     }
   ],
-  "images": [
-    {
-      "uri": "https://raw.githubusercontent.com/lnbits/myextension/main/static/image/1.png",
-      "link": "https://www.youtube.com/embed/SkkIwO_X4i4?si=9JJh1Fc6GfHDZK6b"
-    },
-    {
-      "uri": "https://raw.githubusercontent.com/lnbits/myextension/main/static/image/2.png"
-    },
-    {
-      "uri": "https://raw.githubusercontent.com/lnbits/myextension/main/static/image/3.png"
-    }
-  ],
-  "description_md": "https://raw.githubusercontent.com/lnbits/myextension/main/description.md",
-  "terms_and_conditions_md": "https://raw.githubusercontent.com/lnbits/myextension/main/toc.md",
+  "images": [],
+  "description_md": "/myextension/description.md",
+  "terms_and_conditions_md": "/myextension/toc.md",
   "license": "MIT"
 }

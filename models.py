@@ -207,28 +207,3 @@ class UpdateLamassuConfigData(BaseModel):
     ssh_private_key: Optional[str] = None
 
 
-# Legacy models (keep for backward compatibility during transition)
-class CreateMyExtensionData(BaseModel):
-    id: Optional[str] = ""
-    name: str
-    lnurlpayamount: int
-    lnurlwithdrawamount: int
-    wallet: str
-    total: int = 0
-
-
-class MyExtension(BaseModel):
-    id: str
-    name: str
-    lnurlpayamount: int
-    lnurlwithdrawamount: int
-    wallet: str
-    total: int
-    lnurlpay: Optional[str] = ""
-    lnurlwithdraw: Optional[str] = ""
-
-
-class CreatePayment(BaseModel):
-    myextension_id: str
-    amount: int
-    memo: str

@@ -6,8 +6,6 @@ from lnbits.core.services import websocket_updater
 from lnbits.tasks import register_invoice_listener
 from loguru import logger
 
-from .crud import get_myextension, update_myextension
-from .models import CreateMyExtensionData
 from .transaction_processor import poll_lamassu_transactions
 
 #######################################
@@ -18,6 +16,7 @@ from .transaction_processor import poll_lamassu_transactions
 
 
 async def wait_for_paid_invoices():
+    """Invoice listener for DCA-related payments"""
     invoice_queue = asyncio.Queue()
     register_invoice_listener(invoice_queue, "ext_myextension")
     while True:
@@ -44,35 +43,11 @@ async def hourly_transaction_polling():
             await asyncio.sleep(300)
 
 
-# Do somethhing when an invoice related top this extension is paid
-
-
 async def on_invoice_paid(payment: Payment) -> None:
-    if payment.extra.get("tag") != "MyExtension":
-        return
-
-    myextension_id = payment.extra.get("myextensionId")
-    assert myextension_id, "myextensionId not set in invoice"
-    myextension = await get_myextension(myextension_id)
-    assert myextension, "MyExtension does not exist"
-
-    # update something in the db
-    if payment.extra.get("lnurlwithdraw"):
-        total = myextension.total - payment.amount
-    else:
-        total = myextension.total + payment.amount
-
-    myextension.total = total
-    await update_myextension(CreateMyExtensionData(**myextension.dict()))
-
-    # here we could send some data to a websocket on
-    # wss://<your-lnbits>/api/v1/ws/<myextension_id> and then listen to it on
-
-    some_payment_data = {
-        "name": myextension.name,
-        "amount": payment.amount,
-        "fee": payment.fee,
-        "checking_id": payment.checking_id,
-    }
-
-    await websocket_updater(myextension_id, str(some_payment_data))
+    """Handle DCA-related invoice payments"""
+    # DCA payments are handled internally by the transaction processor
+    # This function can be extended if needed for additional payment processing
+    if payment.extra.get("tag") in ["dca_distribution", "dca_commission"]:
+        logger.info(f"DCA payment processed: {payment.checking_id} - {payment.amount} sats")
+        # Could add websocket notifications here if needed
+        pass

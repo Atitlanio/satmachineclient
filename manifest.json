@@ -1,9 +1,9 @@
 {
   "repos": [
     {
-      "id": "myextension",
+      "id": "satmachineadmin",
       "organisation": "lnbits",
-      "repository": "myextension"
+      "repository": "satmachineadmin"
     }
   ]
 }

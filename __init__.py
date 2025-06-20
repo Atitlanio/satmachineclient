@@ -6,30 +6,30 @@ from loguru import logger
 
 from .crud import db
 from .tasks import wait_for_paid_invoices, hourly_transaction_polling
-from .views import myextension_generic_router
-from .views_api import myextension_api_router
+from .views import satmachineadmin_generic_router
+from .views_api import satmachineadmin_api_router
 
 logger.debug(
-    "This logged message is from myextension/__init__.py, you can debug in your "
+    "This logged message is from satmachineadmin/__init__.py, you can debug in your "
     "extension using 'import logger from loguru' and 'logger.debug(<thing-to-log>)'."
 )
 
 
-myextension_ext: APIRouter = APIRouter(prefix="/myextension", tags=["DCA Admin"])
-myextension_ext.include_router(myextension_generic_router)
-myextension_ext.include_router(myextension_api_router)
+satmachineadmin_ext: APIRouter = APIRouter(prefix="/satmachineadmin", tags=["DCA Admin"])
+satmachineadmin_ext.include_router(satmachineadmin_generic_router)
+satmachineadmin_ext.include_router(satmachineadmin_api_router)
 
-myextension_static_files = [
+satmachineadmin_static_files = [
     {
-        "path": "/myextension/static",
-        "name": "myextension_static",
+        "path": "/satmachineadmin/static",
+        "name": "satmachineadmin_static",
     }
 ]
 
 scheduled_tasks: list[asyncio.Task] = []
 
 
-def myextension_stop():
+def satmachineadmin_stop():
     for task in scheduled_tasks:
         try:
             task.cancel()
@@ -37,20 +37,20 @@ def myextension_stop():
             logger.warning(ex)
 
 
-def myextension_start():
+def satmachineadmin_start():
     # Start invoice listener task
-    invoice_task = create_permanent_unique_task("ext_myextension", wait_for_paid_invoices)
+    invoice_task = create_permanent_unique_task("ext_satmachineadmin", wait_for_paid_invoices)
     scheduled_tasks.append(invoice_task)
     
     # Start hourly transaction polling task
-    polling_task = create_permanent_unique_task("ext_myextension_polling", hourly_transaction_polling)
+    polling_task = create_permanent_unique_task("ext_satmachineadmin_polling", hourly_transaction_polling)
     scheduled_tasks.append(polling_task)
 
 
 __all__ = [
     "db",
-    "myextension_ext",
-    "myextension_static_files",
-    "myextension_start",
-    "myextension_stop",
+    "satmachineadmin_ext",
+    "satmachineadmin_static_files",
+    "satmachineadmin_start",
+    "satmachineadmin_stop",
 ]

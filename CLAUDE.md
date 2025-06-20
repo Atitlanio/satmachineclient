@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an LNBits extension called "satoshimachine" (currently using template name "MyExtension"). LNBits extensions are modular add-ons that extend the functionality of the LNBits Lightning Network wallet platform.
+This is an LNBits extension called "satoshimachine" (currently using template name "SatMachineAdmin"). LNBits extensions are modular add-ons that extend the functionality of the LNBits Lightning Network wallet platform.
 
 ## Development Commands
 
@@ -99,7 +99,7 @@ The global `this.g` object provides access to:
 
 ## Important Notes
 
-- This extension is currently a template with placeholder "MyExtension" naming
+- This extension is currently a template with placeholder "SatMachineAdmin" naming
 - The actual functionality appears to be related to "satoshimachine" based on directory structure
 - The `tmp/` directory contains a more developed version with DCA (Dollar Cost Averaging) functionality
 - Extensions must follow snake_case naming conventions for Python files
@@ -217,4 +217,4 @@ sudo chmod 600 /var/lib/postgresql/.ssh/authorized_keys
 - `crud.py` - Database operations including poll tracking
 - `migrations.py` - Schema evolution (m001-m009)
 - `static/js/index.js` - Admin interface JavaScript
-- `templates/myextension/index.html` - Admin UI templates
+- `templates/satmachineadmin/index.html` - Admin UI templates

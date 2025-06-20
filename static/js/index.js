@@ -165,7 +165,7 @@ window.app = Vue.createApp({
       try {
         const {data} = await LNbits.api.request(
           'GET',
-          '/myextension/api/v1/dca/config',
+          '/satmachineadmin/api/v1/dca/config',
           this.g.user.wallets[0].inkey
         )
         this.lamassuConfig = data
@@ -210,7 +210,7 @@ window.app = Vue.createApp({
         
         const {data: config} = await LNbits.api.request(
           'POST',
-          '/myextension/api/v1/dca/config',
+          '/satmachineadmin/api/v1/dca/config',
           this.g.user.wallets[0].adminkey,
           data
         )
@@ -253,7 +253,7 @@ window.app = Vue.createApp({
       try {
         const { data } = await LNbits.api.request(
           'GET',
-          '/myextension/api/v1/dca/clients',
+          '/satmachineadmin/api/v1/dca/clients',
           this.g.user.wallets[0].inkey
         )
         
@@ -263,7 +263,7 @@ window.app = Vue.createApp({
             try {
               const { data: balance } = await LNbits.api.request(
                 'GET',
-                `/myextension/api/v1/dca/clients/${client.id}/balance`,
+                `/satmachineadmin/api/v1/dca/clients/${client.id}/balance`,
                 this.g.user.wallets[0].inkey
               )
               return {
@@ -298,7 +298,7 @@ window.app = Vue.createApp({
 
         const { data: newClient } = await LNbits.api.request(
           'POST',
-          '/myextension/api/v1/dca/clients',
+          '/satmachineadmin/api/v1/dca/clients',
           this.g.user.wallets[0].adminkey,
           testData
         )
@@ -327,7 +327,7 @@ window.app = Vue.createApp({
 
         const { data: newDeposit } = await LNbits.api.request(
           'POST',
-          '/myextension/api/v1/dca/deposits',
+          '/satmachineadmin/api/v1/dca/deposits',
           this.g.user.wallets[0].adminkey,
           data
         )
@@ -355,7 +355,7 @@ window.app = Vue.createApp({
       try {
         const { data: balance } = await LNbits.api.request(
           'GET',
-          `/myextension/api/v1/dca/clients/${client.id}/balance`,
+          `/satmachineadmin/api/v1/dca/clients/${client.id}/balance`,
           this.g.user.wallets[0].inkey
         )
         this.clientDetailsDialog.data = client
@@ -371,7 +371,7 @@ window.app = Vue.createApp({
       try {
         const { data } = await LNbits.api.request(
           'GET',
-          '/myextension/api/v1/dca/deposits',
+          '/satmachineadmin/api/v1/dca/deposits',
           this.g.user.wallets[0].inkey
         )
         this.deposits = data
@@ -402,7 +402,7 @@ window.app = Vue.createApp({
           // Update existing deposit (mainly for notes/status)
           const { data: updatedDeposit } = await LNbits.api.request(
             'PUT',
-            `/myextension/api/v1/dca/deposits/${this.depositFormDialog.data.id}`,
+            `/satmachineadmin/api/v1/dca/deposits/${this.depositFormDialog.data.id}`,
             this.g.user.wallets[0].adminkey,
             { status: this.depositFormDialog.data.status, notes: data.notes }
           )
@@ -414,7 +414,7 @@ window.app = Vue.createApp({
           // Create new deposit
           const { data: newDeposit } = await LNbits.api.request(
             'POST',
-            '/myextension/api/v1/dca/deposits',
+            '/satmachineadmin/api/v1/dca/deposits',
             this.g.user.wallets[0].adminkey,
             data
           )
@@ -446,7 +446,7 @@ window.app = Vue.createApp({
           .onOk(async () => {
             const { data: updatedDeposit } = await LNbits.api.request(
               'PUT',
-              `/myextension/api/v1/dca/deposits/${deposit.id}/status`,
+              `/satmachineadmin/api/v1/dca/deposits/${deposit.id}/status`,
               this.g.user.wallets[0].adminkey,
               { status: 'confirmed', notes: 'Confirmed by admin - money placed in machine' }
             )
@@ -489,7 +489,7 @@ window.app = Vue.createApp({
       try {
         const {data} = await LNbits.api.request(
           'POST',
-          '/myextension/api/v1/dca/test-connection',
+          '/satmachineadmin/api/v1/dca/test-connection',
           this.g.user.wallets[0].adminkey
         )
         
@@ -535,7 +535,7 @@ window.app = Vue.createApp({
       try {
         const {data} = await LNbits.api.request(
           'POST',
-          '/myextension/api/v1/dca/manual-poll',
+          '/satmachineadmin/api/v1/dca/manual-poll',
           this.g.user.wallets[0].adminkey
         )
         
@@ -563,7 +563,7 @@ window.app = Vue.createApp({
       try {
         const {data} = await LNbits.api.request(
           'POST',
-          '/myextension/api/v1/dca/test-transaction',
+          '/satmachineadmin/api/v1/dca/test-transaction',
           this.g.user.wallets[0].adminkey
         )
         
@@ -616,7 +616,7 @@ window.app = Vue.createApp({
       try {
         const { data } = await LNbits.api.request(
           'GET',
-          '/myextension/api/v1/dca/transactions',
+          '/satmachineadmin/api/v1/dca/transactions',
           this.g.user.wallets[0].inkey
         )
         this.lamassuTransactions = data
@@ -629,7 +629,7 @@ window.app = Vue.createApp({
       try {
         const { data: distributions } = await LNbits.api.request(
           'GET',
-          `/myextension/api/v1/dca/transactions/${transaction.id}/distributions`,
+          `/satmachineadmin/api/v1/dca/transactions/${transaction.id}/distributions`,
           this.g.user.wallets[0].inkey
         )
         

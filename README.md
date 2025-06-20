@@ -188,7 +188,7 @@ The extension creates several tables:
 ├── config.json              # Extension configuration
 ├── manifest.json            # Extension manifest
 ├── templates/
-│   └── myextension/
+│   └── satmachineadmin/
 │       └── index.html       # Main UI template
 └── static/
     └── js/

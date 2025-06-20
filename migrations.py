@@ -1,48 +1,20 @@
-# the migration file is where you build your database tables
-# If you create a new release for your extension ,
-# remember the migration file is like a blockchain, never edit only add!
+# DCA Admin Extension Database Migrations
+# Creates all necessary tables for Dollar Cost Averaging administration
+# with Lamassu ATM integration
 
 
-async def m001_initial(db):
+async def m001_initial_dca_schema(db):
     """
-    Initial templates table.
+    Create complete DCA admin schema from scratch.
     """
-    await db.execute(
-        """
-        CREATE TABLE myextension.maintable (
-            id TEXT PRIMARY KEY NOT NULL,
-            wallet TEXT NOT NULL,
-            name TEXT NOT NULL,
-            total INTEGER DEFAULT 0,
-            lnurlpayamount INTEGER DEFAULT 0,
-            lnurlwithdrawamount INTEGER DEFAULT 0
-        );
-    """
-    )
-
-
-async def m002_add_timestamp(db):
-    """
-    Add timestamp to templates table.
-    """
-    await db.execute(
-        f"""
-        ALTER TABLE myextension.maintable
-        ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now};
-    """
-    )
-
-
-async def m003_create_dca_clients(db):
-    """
-    Create DCA clients table.
-    """
+    # DCA Clients table
     await db.execute(
         f"""
         CREATE TABLE myextension.dca_clients (
             id TEXT PRIMARY KEY NOT NULL,
             user_id TEXT NOT NULL,
             wallet_id TEXT NOT NULL,
+            username TEXT,
             dca_mode TEXT NOT NULL DEFAULT 'flow',
             fixed_mode_daily_limit INTEGER,
             status TEXT NOT NULL DEFAULT 'active',
@@ -52,11 +24,7 @@ async def m003_create_dca_clients(db):
         """
     )
 
-
-async def m004_create_dca_deposits(db):
-    """
-    Create DCA deposits table.
-    """
+    # DCA Deposits table
     await db.execute(
         f"""
         CREATE TABLE myextension.dca_deposits (
@@ -72,11 +40,7 @@ async def m004_create_dca_deposits(db):
         """
     )
 
-
-async def m005_create_dca_payments(db):
-    """
-    Create DCA payments table.
-    """
+    # DCA Payments table
     await db.execute(
         f"""
         CREATE TABLE myextension.dca_payments (
@@ -94,11 +58,7 @@ async def m005_create_dca_payments(db):
         """
     )
 
-
-async def m006_create_lamassu_config(db):
-    """
-    Create Lamassu database configuration table.
-    """
+    # Lamassu Configuration table
     await db.execute(
         f"""
         CREATE TABLE myextension.lamassu_config (
@@ -108,116 +68,26 @@ async def m006_create_lamassu_config(db):
             database_name TEXT NOT NULL,
             username TEXT NOT NULL,
             password TEXT NOT NULL,
+            source_wallet_id TEXT,
+            commission_wallet_id TEXT,
             is_active BOOLEAN NOT NULL DEFAULT true,
             test_connection_last TIMESTAMP,
             test_connection_success BOOLEAN,
+            last_poll_time TIMESTAMP,
+            last_successful_poll TIMESTAMP,
+            use_ssh_tunnel BOOLEAN NOT NULL DEFAULT false,
+            ssh_host TEXT,
+            ssh_port INTEGER NOT NULL DEFAULT 22,
+            ssh_username TEXT,
+            ssh_password TEXT,
+            ssh_private_key TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
             updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );
         """
     )
 
-
-async def m007_add_ssh_tunnel_support(db):
-    """
-    Add SSH tunnel support to Lamassu configuration table.
-    """
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN use_ssh_tunnel BOOLEAN NOT NULL DEFAULT false;
-        """
-    )
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN ssh_host TEXT;
-        """
-    )
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN ssh_port INTEGER NOT NULL DEFAULT 22;
-        """
-    )
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN ssh_username TEXT;
-        """
-    )
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN ssh_password TEXT;
-        """
-    )
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN ssh_private_key TEXT;
-        """
-    )
-
-
-async def m008_add_last_poll_tracking(db):
-    """
-    Add last poll time tracking to Lamassu configuration table.
-    """
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN last_poll_time TIMESTAMP;
-        """
-    )
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN last_successful_poll TIMESTAMP;
-        """
-    )
-
-
-async def m009_add_username_to_dca_clients(db):
-    """
-    Add username field to DCA clients table for better user experience.
-    """
-    await db.execute(
-        """
-        ALTER TABLE myextension.dca_clients 
-        ADD COLUMN username TEXT;
-        """
-    )
-
-
-async def m010_add_source_wallet_to_lamassu_config(db):
-    """
-    Add source wallet ID to Lamassu configuration table for DCA distributions.
-    """
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN source_wallet_id TEXT;
-        """
-    )
-
-
-async def m011_add_commission_wallet_to_lamassu_config(db):
-    """
-    Add commission wallet ID to Lamassu configuration table for commission earnings.
-    """
-    await db.execute(
-        """
-        ALTER TABLE myextension.lamassu_config 
-        ADD COLUMN commission_wallet_id TEXT;
-        """
-    )
-
-
-async def m012_create_lamassu_transactions_table(db):
-    """
-    Create table to store processed Lamassu transactions for audit and UI display.
-    """
+    # Lamassu Transactions table (for audit trail)
     await db.execute(
         f"""
         CREATE TABLE myextension.lamassu_transactions (

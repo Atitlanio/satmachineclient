@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an LNBits extension called "satoshimachine" (currently using template name "SatMachineAdmin"). LNBits extensions are modular add-ons that extend the functionality of the LNBits Lightning Network wallet platform.
+This is the **Satoshi Machine Admin Extension** for LNBits - a Dollar Cost Averaging (DCA) administration system that integrates with Lamassu ATM machines to automatically distribute Bitcoin to registered clients based on their deposit balances.
 
 ## Development Commands
 
@@ -44,23 +44,21 @@ make pre-commit
 ## Architecture
 
 ### Core Structure
-LNBits extensions follow a specific FastAPI + Vue.js architecture:
+The Satoshi Machine Admin extension follows LNBits architecture patterns:
 
 - **Backend (Python/FastAPI)**:
   - `__init__.py` - Extension initialization and router setup
-  - `models.py` - Pydantic data models
-  - `crud.py` - Database operations
-  - `views.py` - Frontend page routes
-  - `views_api.py` - API endpoints
-  - `views_lnurl.py` - LNURL protocol handlers
-  - `migrations.py` - Database schema changes
-  - `tasks.py` - Background tasks
-  - `helpers.py` - Utility functions
+  - `models.py` - Pydantic data models for DCA system
+  - `crud.py` - Database operations for all DCA entities
+  - `views.py` - Admin dashboard page route
+  - `views_api.py` - DCA API endpoints
+  - `migrations.py` - Database schema (condensed single migration)
+  - `tasks.py` - Background polling and invoice listening
+  - `transaction_processor.py` - Core Lamassu integration logic
 
 - **Frontend (Vue.js 3 Options API + Quasar)**:
-  - `static/js/index.js` - Main Vue app
-  - `static/js/components/` - Vue components
-  - `templates/` - HTML templates with Jinja2
+  - `static/js/index.js` - Admin dashboard Vue app
+  - `templates/myextension/index.html` - Admin interface template
 
 ### Key Conventions
 
@@ -92,101 +90,96 @@ The global `this.g` object provides access to:
 
 ## Configuration Files
 
-- `config.json` - Extension configuration
+- `config.json` - Extension configuration (name: "DCA Admin")
 - `manifest.json` - Extension manifest for installation
 - `pyproject.toml` - Python dependencies and tool configuration
 - `package.json` - JavaScript dependencies
 
-## Important Notes
+## DCA System Architecture
 
-- This extension is currently a template with placeholder "SatMachineAdmin" naming
-- The actual functionality appears to be related to "satoshimachine" based on directory structure
-- The `tmp/` directory contains a more developed version with DCA (Dollar Cost Averaging) functionality
-- Extensions must follow snake_case naming conventions for Python files
-- Use Quasar components (QBtn, QInput, QSelect, etc.) for UI consistency
-- Always implement proper loading states and error handling with `LNbits.utils.notifyApiError(error)`
+### Core Components
 
-## DCA System Development Progress
+#### **1. Lamassu ATM Integration**
+- Secure SSH connection to remote Lamassu PostgreSQL database
+- Polls `cash_out_txs` table for new confirmed transactions
+- Supports both SSH password and private key authentication
+- Read-only database access for security
 
-### ✅ Completed Features
-
-#### **1. SSH-Based Database Polling System**
-- Implemented secure SSH connection to remote Lamassu PostgreSQL database
-- Uses subprocess-based SSH tunneling (no external Python dependencies required)
-- Connects as `postgres` user with SSH key authentication
-- Supports both password and private key SSH authentication
-- Proper SSH tunnel cleanup and error handling
-
-#### **2. Transaction Processing Pipeline**
-- Fetches new cash-out transactions from Lamassu `cash_out_txs` table
-- Correctly handles commission calculation with discount support
-- Formula: `base_crypto_atoms = crypto_atoms / (1 + effective_commission)`
+#### **2. Commission Calculation Engine**
+- Formula: `base_amount = total_amount / (1 + effective_commission)`
 - Effective commission: `commission_percentage * (100 - discount) / 100`
-- Timezone-aware processing using UTC timestamps
+- Supports discount percentages for promotional rates
+- Separates commission earnings to configurable wallet
 
-#### **3. Smart Poll Tracking**
-- Tracks `last_poll_time` and `last_successful_poll` in database
-- Prevents missed transactions during server downtime
-- First run checks last 24 hours, subsequent runs check since last successful poll
-- Proper error handling that doesn't update success time on failures
+#### **3. DCA Distribution System**
+- **Flow Mode**: Proportional distribution based on client balance ratios
+- **Fixed Mode**: Daily limit-based allocation (future enhancement)
+- Automatic Bitcoin transfers using LNBits internal payment system
+- Real-time balance tracking and deduction
 
-#### **4. DCA Client Management**
-- Full CRUD operations for DCA clients
-- Added username support for better UX (shows "johndoe" instead of "a1b2c3d4...")
-- Client balance tracking and proportional distribution calculation
-- Support for both Flow Mode and Fixed Mode DCA strategies
+#### **4. Audit and Compliance**
+- Complete transaction audit trail in `lamassu_transactions` table
+- Detailed distribution records in `dca_payments` table
+- Clickable transaction history with distribution breakdowns
+- CSV export capabilities for accounting
 
-#### **5. Admin Interface**
-- Connection testing with detailed step-by-step reporting
-- Manual poll triggers for immediate transaction processing
-- Real-time poll status display with timestamps
-- Username-based client selection in forms and tables
-- Export functionality for clients and deposits data
+### Database Schema
 
-#### **6. Database Schema**
-- Complete migration system (m001-m009)
-- DCA clients table with username field
-- DCA deposits and payments tracking
-- Lamassu configuration with SSH settings
-- Poll tracking timestamps
+**Core Tables:**
+- `dca_clients` - Client registration and DCA mode settings
+- `dca_deposits` - Fiat deposit tracking and confirmation workflow
+- `dca_payments` - Bitcoin payment records and status tracking
+- `lamassu_config` - Database connection and polling configuration
+- `lamassu_transactions` - Complete audit trail of processed ATM transactions
 
-### 🚧 Current State
+**Key Features:**
+- Single migration (`m001_initial_dca_schema`) creates complete schema
+- UTC timezone handling throughout
+- Comprehensive indexing for performance
+- Foreign key relationships maintained
 
-#### **What Works:**
-- ✅ SSH connection to Lamassu database
-- ✅ Transaction detection and fetching
-- ✅ Commission calculation (with discounts)
-- ✅ Proportional distribution calculation
-- ✅ Payment record creation in database
-- ✅ Admin interface for monitoring and management
+### API Endpoints
 
-#### **Database Fields Used:**
-- `crypto_atoms` - Total satoshis with commission baked in
-- `fiat` - Actual fiat dispensed (commission-free amount)
-- `commission_percentage` - Stored as decimal (e.g., 0.045 for 4.5%)
-- `discount` - Discount percentage applied to commission
+#### **Client Management**
+- `GET /api/v1/dca/clients` - List all DCA clients
+- `GET /api/v1/dca/clients/{id}/balance` - Get client balance summary
+- `POST /api/v1/dca/clients` - Create test client (development)
 
-### 📋 Next Steps / TODO
+#### **Deposit Administration**
+- `GET /api/v1/dca/deposits` - List all deposits
+- `POST /api/v1/dca/deposits` - Create new deposit
+- `PUT /api/v1/dca/deposits/{id}/status` - Confirm deposits
 
-#### **1. Actual Bitcoin Payment Implementation**
-- Currently only records payments in database (line 572-573 in `transaction_processor.py`)
-- Need to implement actual Bitcoin transfers to client wallets
-- Integrate with LNBits payment system
-- Handle client wallet addresses/invoices
+#### **Transaction Processing**
+- `GET /api/v1/dca/transactions` - List processed Lamassu transactions
+- `GET /api/v1/dca/transactions/{id}/distributions` - View distribution details
+- `POST /api/v1/dca/manual-poll` - Trigger manual database poll
+- `POST /api/v1/dca/test-transaction` - Process test transaction
 
-#### **2. Payment Status Tracking**
-- Track payment states: pending → confirmed → failed
-- Implement retry logic for failed payments
-- Payment confirmation and error handling
+#### **Configuration**
+- `GET /api/v1/dca/config` - Get Lamassu database configuration
+- `POST /api/v1/dca/config` - Save database and wallet settings
+- `POST /api/v1/dca/test-connection` - Verify connectivity
 
-#### **3. Client Wallet Integration**
-- Store client wallet addresses or Lightning invoices
-- Implement payment delivery mechanisms
-- Handle different payment methods (on-chain, Lightning, etc.)
+### Frontend Architecture
 
-### 🔧 Technical Implementation Details
+#### **Vue.js Components**
+- **Dashboard Overview** - System status and recent activity
+- **Client Management** - DCA client table with balance tracking
+- **Deposit Workflow** - Quick deposit forms and confirmation
+- **Transaction History** - Lamassu transaction audit with drill-down
+- **Configuration Panel** - Database and wallet setup with testing
 
-#### **SSH Connection Setup:**
+#### **Key UX Features**
+- Real-time balance updates during polling
+- Loading states for all async operations
+- Error handling with user-friendly notifications
+- Responsive design for mobile administration
+- Export functionality for audit and compliance
+
+## Technical Implementation Details
+
+### SSH Connection Setup
 ```bash
 # On Lamassu server:
 sudo mkdir -p /var/lib/postgresql/.ssh
@@ -196,25 +189,78 @@ sudo chmod 700 /var/lib/postgresql/.ssh
 sudo chmod 600 /var/lib/postgresql/.ssh/authorized_keys
 ```
 
-#### **Configuration:**
-- Database: `lamassu` on postgres user
-- SSH: Direct connection as postgres user (no tunneling complexity)
-- Polling: Hourly automatic + manual trigger available
-- Security: SSH key authentication, read-only database access
+### Commission Calculation Example
+```python
+# Real transaction: 2000 GTQ → 266,800 sats (3% commission, 0% discount)
+crypto_atoms = 266800  # Total sats from Lamassu
+commission_percentage = 0.03  # 3%
+discount = 0.0  # No discount
 
-### 🐛 Known Considerations
+effective_commission = 0.03 * (100 - 0) / 100 = 0.03
+base_amount = 266800 / (1 + 0.03) = 258,835 sats (for DCA)
+commission_amount = 266800 - 258835 = 7,965 sats (to commission wallet)
+```
 
-- Commission calculation uses `crypto_atoms / (1 + effective_commission)` not `crypto_atoms * commission`
-- Database stores commission as decimal (0.045) not percentage (4.5)
-- Username field is optional for backward compatibility
-- Timezone handling standardized to UTC throughout system
-- SSH requires system `ssh` command (standard on Linux servers)
+### Polling Strategy
+- **Automatic**: Hourly background task via LNBits task system
+- **Manual**: Admin-triggered polling for immediate processing
+- **Smart Recovery**: Tracks last successful poll to prevent missed transactions
+- **Error Handling**: Graceful failure with detailed logging
 
-### 📁 Key Files
+### Security Considerations
+- SSH tunnel encryption for database connectivity
+- Read-only database permissions
+- Wallet key validation for all financial operations
+- Input sanitization and type validation
+- Audit logging for all administrative actions
 
-- `transaction_processor.py` - Main polling and processing logic
-- `models.py` - Data models with commission calculation
-- `crud.py` - Database operations including poll tracking
-- `migrations.py` - Schema evolution (m001-m009)
-- `static/js/index.js` - Admin interface JavaScript
-- `templates/satmachineadmin/index.html` - Admin UI templates
+## Development Workflow
+
+### Adding New Features
+1. **Models**: Update `models.py` with new Pydantic schemas
+2. **Database**: Add migration to `migrations.py` (append only)
+3. **CRUD**: Implement database operations in `crud.py`
+4. **API**: Add endpoints to `views_api.py`
+5. **Frontend**: Update Vue.js components in `static/js/index.js`
+6. **Templates**: Modify HTML template if needed
+
+### Testing
+- Use "Test Connection" for database connectivity verification
+- Use "Test Transaction" for DCA flow validation
+- Manual polling for real-world transaction testing
+- Monitor LNBits logs for detailed error information
+
+### Debugging
+- Enable debug logging: `DEBUG=true`
+- Check SSH tunnel connectivity independently
+- Verify Lamassu database query results
+- Monitor wallet balance changes
+- Review transaction audit trail
+
+## Key Files Reference
+
+- `transaction_processor.py` - Core Lamassu integration and DCA logic
+- `models.py` - Complete data models for DCA system
+- `crud.py` - Database operations with optimized queries
+- `migrations.py` - Single condensed schema migration
+- `static/js/index.js` - Admin dashboard Vue.js application
+- `templates/myextension/index.html` - Admin interface template
+- `config.json` - Extension metadata and configuration
+- `tasks.py` - Background polling and invoice listeners
+
+## Important Notes
+
+- Extension uses LNBits internal payment system for Bitcoin transfers
+- All timestamps stored and processed in UTC timezone
+- Commission calculations handle edge cases and rounding
+- SSH authentication prefers private keys over passwords
+- Database polling is stateful and resumable after downtime
+- UI displays human-readable usernames where available
+- Export functions generate CSV files for external analysis
+
+## Extension Status
+
+**Current Version**: v0.0.1 (Initial Release)  
+**Status**: Production Ready  
+**Dependencies**: LNBits v1.0.0+, SSH access to Lamassu server  
+**License**: MIT

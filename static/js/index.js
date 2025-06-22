@@ -51,7 +51,10 @@ window.app = Vue.createApp({
         descending: true,
         page: 1,
         rowsPerPage: 10
-      }
+      },
+      chartTimeRange: '30d',
+      dcaChart: null,
+      analyticsData: null
     }
   },
 
@@ -81,14 +84,24 @@ window.app = Vue.createApp({
 
     formatDate(dateString) {
       if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString()
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString)
+        return 'Invalid Date'
+      }
+      return date.toLocaleDateString()
     },
 
     formatTime(dateString) {
       if (!dateString) return ''
-      return new Date(dateString).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid time string:', dateString)
+        return 'Invalid Time'
+      }
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
       })
     },
 
@@ -104,7 +117,7 @@ window.app = Vue.createApp({
 
     async loadDashboardData() {
       try {
-        const {data} = await LNbits.api.request(
+        const { data } = await LNbits.api.request(
           'GET',
           '/satmachineclient/api/v1/dashboard/summary',
           this.g.user.wallets[0].inkey
@@ -118,11 +131,19 @@ window.app = Vue.createApp({
 
     async loadTransactions() {
       try {
-        const {data} = await LNbits.api.request(
+        const { data } = await LNbits.api.request(
           'GET',
           '/satmachineclient/api/v1/dashboard/transactions?limit=50',
           this.g.user.wallets[0].inkey
         )
+
+        // Debug: Log the first transaction to see date format
+        if (data.length > 0) {
+          console.log('Sample transaction data:', data[0])
+          console.log('transaction_time:', data[0].transaction_time)
+          console.log('created_at:', data[0].created_at)
+        }
+
         // Sort by most recent first and store
         this.transactions = data.sort((a, b) => {
           const dateA = new Date(a.transaction_time || a.created_at)
@@ -167,7 +188,7 @@ window.app = Vue.createApp({
     getNextMilestone() {
       if (!this.dashboardData) return { target: 100000, name: '100k sats' }
       const sats = this.dashboardData.total_sats_accumulated
-      
+
       if (sats < 10000) return { target: 10000, name: '10k sats' }
       if (sats < 100000) return { target: 100000, name: '100k sats' }
       if (sats < 500000) return { target: 500000, name: '500k sats' }
@@ -180,10 +201,195 @@ window.app = Vue.createApp({
       if (!this.dashboardData) return 0
       const sats = this.dashboardData.total_sats_accumulated
       const milestone = this.getNextMilestone()
-      
+
       // Show total progress toward the next milestone (from 0)
       const progress = (sats / milestone.target) * 100
       return Math.min(Math.max(progress, 0), 100)
+    },
+    async loadChartData() {
+      try {
+        const { data } = await LNbits.api.request(
+          'GET',
+          `/satmachineclient/api/v1/dashboard/analytics?time_range=${this.chartTimeRange}`,
+          this.g.user.wallets[0].inkey
+        )
+
+        // Debug: Log analytics data
+        console.log('Analytics data received:', data)
+        if (data && data.cost_basis_history && data.cost_basis_history.length > 0) {
+          console.log('Sample cost basis point:', data.cost_basis_history[0])
+        }
+
+        this.analyticsData = data
+        // Use nextTick to ensure DOM is ready
+        this.$nextTick(() => {
+          this.initDCAChart()
+        })
+      } catch (error) {
+        console.error('Error loading chart data:', error)
+      }
+    },
+
+    initDCAChart() {
+      console.log('initDCAChart called')
+      console.log('analyticsData:', this.analyticsData)
+      console.log('dcaChart ref:', this.$refs.dcaChart)
+
+      if (!this.analyticsData) {
+        console.log('No analytics data available')
+        return
+      }
+
+      if (!this.$refs.dcaChart) {
+        console.log('No chart ref available')
+        return
+      }
+
+      // Check if Chart.js is loaded
+      if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded')
+        return
+      }
+
+      // Destroy existing chart
+      if (this.dcaChart) {
+        this.dcaChart.destroy()
+      }
+
+      const ctx = this.$refs.dcaChart.getContext('2d')
+
+      // Use accumulation_timeline data which is already aggregated by day
+      const timelineData = this.analyticsData.accumulation_timeline || []
+
+      console.log('Timeline data:', timelineData)
+      console.log('Timeline data length:', timelineData.length)
+
+      if (timelineData.length === 0) {
+        console.log('No timeline data available, falling back to cost basis data')
+        // Fallback to cost_basis_history if no timeline data
+        const costBasisData = this.analyticsData.cost_basis_history || []
+        if (costBasisData.length === 0) {
+          console.log('No chart data available')
+          return
+        }
+
+        // Group cost basis data by date to avoid duplicates
+        const groupedData = new Map()
+        costBasisData.forEach(point => {
+          const dateStr = new Date(point.date).toDateString()
+          if (!groupedData.has(dateStr)) {
+            groupedData.set(dateStr, point)
+          } else {
+            // Use the latest cumulative values for the same date
+            const existing = groupedData.get(dateStr)
+            if (point.cumulative_sats > existing.cumulative_sats) {
+              groupedData.set(dateStr, point)
+            }
+          }
+        })
+
+        const chartData = Array.from(groupedData.values()).sort((a, b) =>
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        )
+
+        const labels = chartData.map(point => {
+          const date = new Date(point.date)
+          return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
+          })
+        })
+        const cumulativeSats = chartData.map(point => point.cumulative_sats)
+
+        this.createChart(labels, cumulativeSats)
+        return
+      }
+
+      // Calculate running totals for timeline data
+      let runningSats = 0
+      const labels = []
+      const cumulativeSats = []
+
+      timelineData.forEach(point => {
+        runningSats += point.sats
+
+        const date = new Date(point.date)
+        if (!isNaN(date.getTime())) {
+          labels.push(date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
+          }))
+          cumulativeSats.push(runningSats)
+        }
+      })
+
+      this.createChart(labels, cumulativeSats)
+    },
+
+    createChart(labels, cumulativeSats) {
+      const ctx = this.$refs.dcaChart.getContext('2d')
+
+      this.dcaChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Total Sats Accumulated',
+            data: cumulativeSats,
+            borderColor: '#FF9500',  // Bitcoin orange
+            backgroundColor: 'rgba(255, 149, 0, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#FF9500',
+            pointBorderColor: '#FF9500',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false  // Hide legend to keep it clean
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function (context) {
+                  return `${context.parsed.y.toLocaleString()} sats`
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              display: true,
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              display: true,
+              grid: {
+                color: 'rgba(0,0,0,0.1)'
+              },
+              ticks: {
+                callback: function (value) {
+                  return value.toLocaleString() + ' sats'
+                }
+              }
+            }
+          },
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          }
+        }
+      })
     }
   },
 
@@ -192,7 +398,8 @@ window.app = Vue.createApp({
       this.loading = true
       await Promise.all([
         this.loadDashboardData(),
-        this.loadTransactions()
+        this.loadTransactions(),
+        this.loadChartData()
       ])
     } catch (error) {
       console.error('Error initializing dashboard:', error)
@@ -200,6 +407,15 @@ window.app = Vue.createApp({
     } finally {
       this.loading = false
     }
+  },
+
+  mounted() {
+    // Initialize chart after DOM is ready
+    this.$nextTick(() => {
+      if (this.analyticsData) {
+        this.initDCAChart()
+      }
+    })
   },
 
   computed: {

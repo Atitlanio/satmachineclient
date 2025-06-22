@@ -197,114 +197,228 @@ async def get_client_transactions(
 async def get_client_analytics(user_id: str, time_range: str = "30d") -> Optional[ClientAnalytics]:
     """Get client performance analytics"""
     
-    # Get client ID
-    client = await db.fetchone(
-        "SELECT id FROM satmachineadmin.dca_clients WHERE user_id = :user_id",
-        {"user_id": user_id}
-    )
+    try:
+        from datetime import datetime
+        
+        # Get client ID
+        client = await db.fetchone(
+            "SELECT id FROM satmachineadmin.dca_clients WHERE user_id = :user_id",
+            {"user_id": user_id}
+        )
+        
+        if not client:
+            print(f"No client found for user_id: {user_id}")
+            return None
+        
+        print(f"Found client {client['id']} for user {user_id}, loading analytics for time_range: {time_range}")
     
-    if not client:
-        return None
-    
-    # Calculate date range
-    if time_range == "7d":
-        start_date = datetime.now() - timedelta(days=7)
-    elif time_range == "30d":
-        start_date = datetime.now() - timedelta(days=30)
-    elif time_range == "90d":
-        start_date = datetime.now() - timedelta(days=90)
-    elif time_range == "1y":
-        start_date = datetime.now() - timedelta(days=365)
-    else:  # "all"
-        start_date = datetime(2020, 1, 1)  # Arbitrary early date
-    
-    # Get cost basis history (running average)
-    cost_basis_data = await db.fetchall(
-        """
-        SELECT 
-            created_at,
-            amount_sats,
-            amount_fiat,
-            exchange_rate,
-            SUM(amount_sats) OVER (ORDER BY created_at) as cumulative_sats,
-            SUM(amount_fiat) OVER (ORDER BY created_at) as cumulative_fiat
-        FROM satmachineadmin.dca_payments 
-        WHERE client_id = :client_id 
-          AND status = 'confirmed'
-          AND created_at >= :start_date
-        ORDER BY created_at
-        """,
-        {"client_id": client["id"], "start_date": start_date}
-    )
-    
-    # Build cost basis history
-    cost_basis_history = []
-    for record in cost_basis_data:
-        avg_cost_basis = record["cumulative_sats"] / record["cumulative_fiat"] if record["cumulative_fiat"] > 0 else 0
-        cost_basis_history.append({
-            "date": record["created_at"].isoformat(),
-            "average_cost_basis": avg_cost_basis,
-            "cumulative_sats": record["cumulative_sats"],
-            "cumulative_fiat": record["cumulative_fiat"]
-        })
-    
-    # Get accumulation timeline (daily/weekly aggregation)
-    accumulation_data = await db.fetchall(
-        """
-        SELECT 
-            DATE(created_at) as date,
-            SUM(amount_sats) as daily_sats,
-            SUM(amount_fiat) as daily_fiat,
-            COUNT(*) as daily_transactions
-        FROM satmachineadmin.dca_payments 
-        WHERE client_id = :client_id 
-          AND status = 'confirmed'
-          AND created_at >= :start_date
-        GROUP BY DATE(created_at)
-        ORDER BY date
-        """,
-        {"client_id": client["id"], "start_date": start_date}
-    )
-    
-    accumulation_timeline = [
-        {
-            "date": record["date"],
-            "sats": record["daily_sats"],
-            "fiat": record["daily_fiat"],
-            "transactions": record["daily_transactions"]
+        # Calculate date range
+        if time_range == "7d":
+            start_date = datetime.now() - timedelta(days=7)
+        elif time_range == "30d":
+            start_date = datetime.now() - timedelta(days=30)
+        elif time_range == "90d":
+            start_date = datetime.now() - timedelta(days=90)
+        elif time_range == "1y":
+            start_date = datetime.now() - timedelta(days=365)
+        else:  # "all"
+            start_date = datetime(2020, 1, 1)  # Arbitrary early date
+        
+        # Get cost basis history (running average)
+        cost_basis_data = await db.fetchall(
+            """
+            SELECT 
+                COALESCE(transaction_time, created_at) as transaction_date,
+                amount_sats,
+                amount_fiat,
+                exchange_rate,
+                SUM(amount_sats) OVER (ORDER BY COALESCE(transaction_time, created_at)) as cumulative_sats,
+                SUM(amount_fiat) OVER (ORDER BY COALESCE(transaction_time, created_at)) as cumulative_fiat
+            FROM satmachineadmin.dca_payments 
+            WHERE client_id = :client_id 
+              AND status = 'confirmed'
+              AND COALESCE(transaction_time, created_at) IS NOT NULL
+              AND COALESCE(transaction_time, created_at) >= :start_date
+            ORDER BY COALESCE(transaction_time, created_at)
+            """,
+            {"client_id": client["id"], "start_date": start_date}
+        )
+        
+        # Build cost basis history
+        cost_basis_history = []
+        for record in cost_basis_data:
+            avg_cost_basis = record["cumulative_sats"] / record["cumulative_fiat"] if record["cumulative_fiat"] > 0 else 0
+            # Use transaction_date (which is COALESCE(transaction_time, created_at))
+            date_to_use = record["transaction_date"]
+            if date_to_use is None:
+                print(f"Warning: Null date in cost basis data, skipping record")
+                continue
+            elif hasattr(date_to_use, 'isoformat'):
+                # This is a datetime object
+                date_str = date_to_use.isoformat()
+            elif hasattr(date_to_use, 'strftime'):
+                # This is a date object 
+                date_str = date_to_use.strftime('%Y-%m-%d')
+            elif isinstance(date_to_use, (int, float)):
+                # This might be a Unix timestamp - check if it's in a reasonable range
+                timestamp = float(date_to_use)
+                # Check if this looks like a timestamp (between 1970 and 2100)
+                if 0 < timestamp < 4102444800:  # Jan 1, 2100
+                    # Could be seconds or milliseconds
+                    if timestamp > 1000000000000:  # Likely milliseconds
+                        timestamp = timestamp / 1000
+                    date_str = datetime.fromtimestamp(timestamp).isoformat()
+                else:
+                    # Not a timestamp, treat as string
+                    date_str = str(date_to_use)
+                    print(f"Warning: Numeric date value out of timestamp range: {date_to_use}")
+            elif isinstance(date_to_use, str) and date_to_use.isdigit():
+                # This is a numeric string - might be a timestamp
+                timestamp = float(date_to_use)
+                # Check if this looks like a timestamp
+                if 0 < timestamp < 4102444800:  # Jan 1, 2100
+                    # Could be seconds or milliseconds
+                    if timestamp > 1000000000000:  # Likely milliseconds
+                        timestamp = timestamp / 1000
+                    date_str = datetime.fromtimestamp(timestamp).isoformat()
+                else:
+                    # Not a timestamp, treat as string
+                    date_str = str(date_to_use)
+                    print(f"Warning: Numeric date string out of timestamp range: {date_to_use}")
+            else:
+                # Convert string representation to proper format
+                date_str = str(date_to_use)
+                print(f"Warning: Unexpected date format: {date_to_use} (type: {type(date_to_use)})")
+            
+            cost_basis_history.append({
+                "date": date_str,
+                "average_cost_basis": avg_cost_basis,
+                "cumulative_sats": record["cumulative_sats"],
+                "cumulative_fiat": record["cumulative_fiat"]
+            })
+        
+        # Get accumulation timeline (daily/weekly aggregation)
+        accumulation_data = await db.fetchall(
+            """
+            SELECT 
+                DATE(COALESCE(transaction_time, created_at)) as date,
+                SUM(amount_sats) as daily_sats,
+                SUM(amount_fiat) as daily_fiat,
+                COUNT(*) as daily_transactions
+            FROM satmachineadmin.dca_payments 
+            WHERE client_id = :client_id 
+              AND status = 'confirmed'
+              AND COALESCE(transaction_time, created_at) IS NOT NULL
+              AND COALESCE(transaction_time, created_at) >= :start_date
+            GROUP BY DATE(COALESCE(transaction_time, created_at))
+            ORDER BY date
+            """,
+            {"client_id": client["id"], "start_date": start_date}
+        )
+        
+        accumulation_timeline = []
+        for record in accumulation_data:
+            # Handle date conversion safely
+            date_value = record["date"]
+            if date_value is None:
+                print(f"Warning: Null date in accumulation data, skipping record")
+                continue
+            elif hasattr(date_value, 'isoformat'):
+                # This is a datetime object
+                date_str = date_value.isoformat()
+            elif hasattr(date_value, 'strftime'):
+                # This is a date object (from DATE() function)
+                date_str = date_value.strftime('%Y-%m-%d')
+            elif isinstance(date_value, (int, float)):
+                # This might be a Unix timestamp - check if it's in a reasonable range
+                timestamp = float(date_value)
+                # Check if this looks like a timestamp (between 1970 and 2100)
+                if 0 < timestamp < 4102444800:  # Jan 1, 2100
+                    # Could be seconds or milliseconds
+                    if timestamp > 1000000000000:  # Likely milliseconds
+                        timestamp = timestamp / 1000
+                    date_str = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
+                else:
+                    # Not a timestamp, treat as string
+                    date_str = str(date_value)
+                    print(f"Warning: Numeric accumulation date out of timestamp range: {date_value}")
+            elif isinstance(date_value, str) and date_value.isdigit():
+                # This is a numeric string - might be a timestamp
+                timestamp = float(date_value)
+                # Check if this looks like a timestamp
+                if 0 < timestamp < 4102444800:  # Jan 1, 2100
+                    # Could be seconds or milliseconds
+                    if timestamp > 1000000000000:  # Likely milliseconds
+                        timestamp = timestamp / 1000
+                    date_str = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
+                else:
+                    # Not a timestamp, treat as string
+                    date_str = str(date_value)
+                    print(f"Warning: Numeric accumulation date string out of timestamp range: {date_value}")
+            else:
+                # Convert string representation to proper format
+                date_str = str(date_value)
+                print(f"Warning: Unexpected accumulation date format: {date_value} (type: {type(date_value)})")
+            
+            accumulation_timeline.append({
+                "date": date_str,
+                "sats": record["daily_sats"],
+                "fiat": record["daily_fiat"],
+                "transactions": record["daily_transactions"]
+            })
+        
+        # Get transaction frequency metrics
+        frequency_stats = await db.fetchone(
+            """
+            SELECT 
+                COUNT(*) as total_transactions,
+                AVG(amount_sats) as avg_sats_per_tx,
+                AVG(amount_fiat) as avg_fiat_per_tx,
+                MIN(COALESCE(transaction_time, created_at)) as first_tx,
+                MAX(COALESCE(transaction_time, created_at)) as last_tx
+            FROM satmachineadmin.dca_payments 
+            WHERE client_id = :client_id AND status = 'confirmed'
+            """,
+            {"client_id": client["id"]}
+        )
+        
+        # Build transaction frequency with safe date handling
+        transaction_frequency = {
+            "total_transactions": frequency_stats["total_transactions"] if frequency_stats else 0,
+            "avg_sats_per_transaction": frequency_stats["avg_sats_per_tx"] if frequency_stats else 0,
+            "avg_fiat_per_transaction": frequency_stats["avg_fiat_per_tx"] if frequency_stats else 0,
+            "first_transaction": None,
+            "last_transaction": None
         }
-        for record in accumulation_data
-    ]
+        
+        # Handle first_tx date safely
+        if frequency_stats and frequency_stats["first_tx"]:
+            first_tx = frequency_stats["first_tx"]
+            if hasattr(first_tx, 'isoformat'):
+                transaction_frequency["first_transaction"] = first_tx.isoformat()
+            else:
+                transaction_frequency["first_transaction"] = str(first_tx)
+        
+        # Handle last_tx date safely
+        if frequency_stats and frequency_stats["last_tx"]:
+            last_tx = frequency_stats["last_tx"]
+            if hasattr(last_tx, 'isoformat'):
+                transaction_frequency["last_transaction"] = last_tx.isoformat()
+            else:
+                transaction_frequency["last_transaction"] = str(last_tx)
     
-    # Get transaction frequency metrics
-    frequency_stats = await db.fetchone(
-        """
-        SELECT 
-            COUNT(*) as total_transactions,
-            AVG(amount_sats) as avg_sats_per_tx,
-            AVG(amount_fiat) as avg_fiat_per_tx,
-            MIN(created_at) as first_tx,
-            MAX(created_at) as last_tx
-        FROM satmachineadmin.dca_payments 
-        WHERE client_id = :client_id AND status = 'confirmed'
-        """,
-        {"client_id": client["id"]}
-    )
-    
-    transaction_frequency = {
-        "total_transactions": frequency_stats["total_transactions"] if frequency_stats else 0,
-        "avg_sats_per_transaction": frequency_stats["avg_sats_per_tx"] if frequency_stats else 0,
-        "avg_fiat_per_transaction": frequency_stats["avg_fiat_per_tx"] if frequency_stats else 0,
-        "first_transaction": frequency_stats["first_tx"].isoformat() if frequency_stats and frequency_stats["first_tx"] else None,
-        "last_transaction": frequency_stats["last_tx"].isoformat() if frequency_stats and frequency_stats["last_tx"] else None
-    }
-    
-    return ClientAnalytics(
-        user_id=user_id,
-        cost_basis_history=cost_basis_history,
-        accumulation_timeline=accumulation_timeline,
-        transaction_frequency=transaction_frequency
-    )
+        return ClientAnalytics(
+            user_id=user_id,
+            cost_basis_history=cost_basis_history,
+            accumulation_timeline=accumulation_timeline,
+            transaction_frequency=transaction_frequency
+        )
+        
+    except Exception as e:
+        print(f"Error in get_client_analytics for user {user_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 async def get_client_by_user_id(user_id: str):

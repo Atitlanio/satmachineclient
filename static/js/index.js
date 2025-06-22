@@ -21,6 +21,20 @@ window.app = Vue.createApp({
       }).format(amount);
     },
 
+    formatCurrencyWithCode(amount, currencyCode) {
+      if (!amount) return `${currencyCode} 0.00`;
+      // Format with the provided currency code
+      try {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: currencyCode,
+        }).format(amount);
+      } catch (error) {
+        // Fallback if currency code is not supported
+        return `${currencyCode} ${amount.toFixed(2)}`;
+      }
+    },
+
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString).toLocaleDateString()

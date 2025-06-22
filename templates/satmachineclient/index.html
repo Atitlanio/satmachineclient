@@ -57,6 +57,32 @@
               </div>
             </div>
           </div>
+          <!-- Current Value Row -->
+          <div class="row q-col-gutter-md q-mt-sm">
+            <div class="col-12 col-md-6">
+              <q-card flat class="bg-green-1">
+                <q-card-section class="text-center">
+                  <div class="text-h5 text-green-8">${formatCurrencyWithCode(dashboardData.current_sats_fiat_value, dashboardData.currency)}</div>
+                  <div class="text-caption text-green-7">Current Value of Bitcoin Holdings</div>
+                  <div class="text-caption text-grey">at today's ${dashboardData.currency} exchange rate</div>
+                </q-card-section>
+              </q-card>
+            </div>
+            <div class="col-12 col-md-6">
+              <q-card flat class="bg-blue-1">
+                <q-card-section class="text-center">
+                  <div class="text-h6 text-blue-8">
+                    ${dashboardData.current_sats_fiat_value > (dashboardData.total_fiat_invested / 100) ? '+' : ''}
+                    ${formatCurrencyWithCode(dashboardData.current_sats_fiat_value - (dashboardData.total_fiat_invested / 100), dashboardData.currency)}
+                  </div>
+                  <div class="text-caption text-blue-7">
+                    ${dashboardData.current_sats_fiat_value > (dashboardData.total_fiat_invested / 100) ? 'Unrealized Gain' : 'Unrealized Loss'}
+                  </div>
+                  <div class="text-caption text-grey">vs total invested</div>
+                </q-card-section>
+              </q-card>
+            </div>
+          </div>
           <!-- Pending Deposits Row -->
           <div v-if="dashboardData.pending_fiat_deposits > 0" class="row q-col-gutter-md q-mt-sm">
             <div class="col-12">

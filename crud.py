@@ -4,6 +4,8 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from lnbits.db import Database
+from lnbits.utils.exchange_rates import satoshis_amount_as_fiat
+from lnbits.core.crud.wallets import get_wallet
 
 from .models import (
     ClientDashboardSummary,
@@ -31,6 +33,13 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     
     if not client:
         return None
+    
+    # Get wallet to determine currency
+    wallet = await get_wallet(client["wallet_id"])
+    # TODO: Get currency from wallet; bit more difficult to do in a different 
+    # currency than deposit cause of cross exchange rates
+    # currency = wallet.currency or "GTQ"  # Default to GTQ if no currency set
+    currency = "GTQ"  # Default to GTQ if no currency set
     
     # Get total sats accumulated from DCA transactions
     sats_result = await db.fetchone(
@@ -95,17 +104,28 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     remaining_balance = confirmed_deposits - dca_spent  # Remaining = deposits - DCA spending
     avg_cost_basis = total_sats / dca_spent if dca_spent > 0 else 0  # Cost basis = sats / fiat spent
     
+    # Calculate current fiat value of total sats
+    current_sats_fiat_value = 0.0
+    if total_sats > 0:
+        try:
+            current_sats_fiat_value = await satoshis_amount_as_fiat(total_sats, currency)
+        except Exception as e:
+            print(f"Warning: Could not fetch exchange rate for {currency}: {e}")
+            current_sats_fiat_value = 0.0
+    
     return ClientDashboardSummary(
         user_id=user_id,
         total_sats_accumulated=total_sats,
         total_fiat_invested=total_invested,  # Sum of confirmed deposits
         pending_fiat_deposits=pending_deposits,  # Sum of pending deposits
+        current_sats_fiat_value=current_sats_fiat_value,  # Current fiat value of sats
         average_cost_basis=avg_cost_basis,
         current_fiat_balance=remaining_balance,  # Confirmed deposits - DCA spent
         total_transactions=tx_stats["tx_count"] if tx_stats else 0,
         dca_mode=client["dca_mode"],
         dca_status=client["status"],
-        last_transaction_date=tx_stats["last_tx_date"] if tx_stats else None
+        last_transaction_date=tx_stats["last_tx_date"] if tx_stats else None,
+        currency=currency  # Wallet's currency
     )
 
 

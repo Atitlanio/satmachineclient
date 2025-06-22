@@ -57,8 +57,23 @@
               </div>
             </div>
           </div>
-          <!-- Current Value Row -->
-          <div class="row q-col-gutter-md q-mt-sm">
+          <!-- Fiat Value Toggle Button -->
+          <div class="row q-mt-sm">
+            <div class="col-12 text-center">
+              <q-btn 
+                flat 
+                dense
+                :color="showFiatValues ? 'orange' : 'grey'"
+                :icon="showFiatValues ? 'visibility_off' : 'attach_money'"
+                @click="showFiatValues = !showFiatValues"
+              >
+                ${showFiatValues ? 'Hide' : 'Show'} Fiat Values
+              </q-btn>
+            </div>
+          </div>
+
+          <!-- Current Value Row (Conditional) -->
+          <div v-if="showFiatValues" class="row q-col-gutter-md q-mt-sm">
             <div class="col-12 col-md-6">
               <q-card flat class="bg-orange-1">
                 <q-card-section class="text-center">
@@ -76,7 +91,7 @@
                     ${formatCurrencyWithCode((dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) - dashboardData.total_fiat_invested, dashboardData.currency)}
                   </div>
                   <div class="text-caption" :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-7' : 'text-red-7'">
-                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'Unrealized Gain' : 'Unrealized Loss'}
+                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'Bitcoin Appreciation vs Fiat' : 'Fiat Depreciation vs Bitcoin'}
                   </div>
                   <div class="text-caption text-grey">vs total invested</div>
                 </q-card-section>

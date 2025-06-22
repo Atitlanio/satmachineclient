@@ -7,7 +7,8 @@ window.app = Vue.createApp({
       dashboardData: null,
       transactions: [],
       loading: true,
-      error: null
+      error: null,
+      showFiatValues: false  // Hide fiat values by default
     }
   },
 

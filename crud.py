@@ -32,7 +32,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     if not client:
         return None
     
-    # Get total sats accumulated
+    # Get total sats accumulated from DCA transactions
     sats_result = await db.fetchone(
         """
         SELECT COALESCE(SUM(amount_sats), 0) as total_sats 
@@ -42,26 +42,32 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
         {"client_id": client["id"]}
     )
     
-    # Get total fiat invested 
-    fiat_result = await db.fetchone(
+    # Get total confirmed deposits (this is the "total invested")
+    deposits_result = await db.fetchone(
         """
-        SELECT COALESCE(SUM(amount_fiat), 0) as total_fiat
-        FROM satmachineadmin.dca_payments 
+        SELECT COALESCE(SUM(amount), 0) as confirmed_deposits
+        FROM satmachineadmin.dca_deposits 
         WHERE client_id = :client_id AND status = 'confirmed'
         """,
         {"client_id": client["id"]}
     )
     
-    # Get current fiat balance (deposits - payments)
-    balance_result = await db.fetchone(
+    # Get total pending deposits (for additional info)
+    pending_deposits_result = await db.fetchone(
         """
-        SELECT 
-            COALESCE(SUM(CASE WHEN d.status = 'confirmed' THEN d.amount ELSE 0 END), 0) as deposits,
-            COALESCE(SUM(CASE WHEN p.status = 'confirmed' THEN p.amount_fiat ELSE 0 END), 0) as payments
-        FROM satmachineadmin.dca_clients c
-        LEFT JOIN satmachineadmin.dca_deposits d ON c.id = d.client_id
-        LEFT JOIN satmachineadmin.dca_payments p ON c.id = p.client_id
-        WHERE c.id = :client_id
+        SELECT COALESCE(SUM(amount), 0) as pending_deposits
+        FROM satmachineadmin.dca_deposits 
+        WHERE client_id = :client_id AND status = 'pending'
+        """,
+        {"client_id": client["id"]}
+    )
+    
+    # Get total fiat spent on DCA transactions (to calculate remaining balance)
+    dca_spent_result = await db.fetchone(
+        """
+        SELECT COALESCE(SUM(amount_fiat), 0) as dca_spent
+        FROM satmachineadmin.dca_payments 
+        WHERE client_id = :client_id AND status = 'confirmed'
         """,
         {"client_id": client["id"]}
     )
@@ -78,20 +84,23 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
         {"client_id": client["id"]}
     )
     
+    # Extract values from query results
     total_sats = sats_result["total_sats"] if sats_result else 0
-    total_fiat = fiat_result["total_fiat"] if fiat_result else 0
-    deposits = balance_result["deposits"] if balance_result else 0
-    payments = balance_result["payments"] if balance_result else 0
+    confirmed_deposits = deposits_result["confirmed_deposits"] if deposits_result else 0
+    pending_deposits = pending_deposits_result["pending_deposits"] if pending_deposits_result else 0
+    dca_spent = dca_spent_result["dca_spent"] if dca_spent_result else 0
     
-    # Calculate average cost basis (sats per fiat unit)
-    avg_cost_basis = total_sats / total_fiat if total_fiat > 0 else 0
+    # Calculate metrics
+    total_invested = confirmed_deposits  # Total invested = all confirmed deposits
+    remaining_balance = confirmed_deposits - dca_spent  # Remaining = deposits - DCA spending
+    avg_cost_basis = total_sats / dca_spent if dca_spent > 0 else 0  # Cost basis = sats / fiat spent
     
     return ClientDashboardSummary(
         user_id=user_id,
         total_sats_accumulated=total_sats,
-        total_fiat_invested=total_fiat,
+        total_fiat_invested=total_invested,  # Sum of confirmed deposits
         average_cost_basis=avg_cost_basis,
-        current_fiat_balance=deposits - payments,
+        current_fiat_balance=remaining_balance,  # Confirmed deposits - DCA spent
         total_transactions=tx_stats["tx_count"] if tx_stats else 0,
         dca_mode=client["dca_mode"],
         dca_status=client["status"],

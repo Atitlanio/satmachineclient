@@ -14,11 +14,11 @@ window.app = Vue.createApp({
   methods: {
     formatCurrency(amount) {
       if (!amount) return 'Q 0.00';
-      // Convert centavos to quetzales
+      // Values are already in full currency units, not centavos
       return new Intl.NumberFormat('es-GT', {
         style: 'currency',
         currency: 'GTQ',
-      }).format(amount / 100);
+      }).format(amount);
     },
 
     formatDate(dateString) {

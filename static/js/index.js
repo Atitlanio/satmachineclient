@@ -257,161 +257,163 @@ window.app = Vue.createApp({
       }
 
       const ctx = this.$refs.dcaChart.getContext('2d')
-
-      // Use accumulation_timeline data which is already aggregated by day
+      
+      // Use accumulation_timeline data which is already grouped by day
       const timelineData = this.analyticsData.accumulation_timeline || []
-
-      console.log('Timeline data:', timelineData)
-      console.log('Timeline data length:', timelineData.length)
-
-      if (timelineData.length === 0) {
-        console.log('No timeline data available, falling back to cost basis data')
-        // Fallback to cost_basis_history if no timeline data
-        const costBasisData = this.analyticsData.cost_basis_history || []
-        if (costBasisData.length === 0) {
-          console.log('No chart data available')
-          // Create gradient for placeholder chart
-          const placeholderGradient = ctx.createLinearGradient(0, 0, 0, 300)
-          placeholderGradient.addColorStop(0, 'rgba(255, 149, 0, 0.3)')
-          placeholderGradient.addColorStop(1, 'rgba(255, 149, 0, 0.05)')
+      console.log('Timeline data sample:', timelineData.slice(0, 2)) // Debug first 2 records
+      
+      // If we have timeline data, use it (already grouped by day)
+      if (timelineData.length > 0) {
+        // Calculate running totals from daily data
+        let runningSats = 0
+        const labels = []
+        const cumulativeSats = []
+        
+        timelineData.forEach(point => {
+          runningSats += point.sats
           
-          // Show placeholder chart
-          this.dcaChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: ['Start Your DCA Journey'],
-              datasets: [{
-                label: 'Total Sats Accumulated',
-                data: [0],
+          const date = new Date(point.date)
+          if (!isNaN(date.getTime())) {
+            labels.push(date.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric' 
+            }))
+            cumulativeSats.push(runningSats)
+          }
+        })
+        
+        this.createChart(labels, cumulativeSats)
+        return
+      }
+      
+      // Fallback to cost_basis_history but group by date to avoid duplicates
+      console.log('No timeline data, using cost_basis_history as fallback')
+      const chartData = this.analyticsData.cost_basis_history || []
+      console.log('Chart data sample:', chartData.slice(0, 2)) // Debug first 2 records
+      
+      // Handle empty data case
+      if (chartData.length === 0) {
+        console.log('No chart data available')
+        // Create gradient for placeholder chart
+        const placeholderGradient = ctx.createLinearGradient(0, 0, 0, 300)
+        placeholderGradient.addColorStop(0, 'rgba(255, 149, 0, 0.3)')
+        placeholderGradient.addColorStop(1, 'rgba(255, 149, 0, 0.05)')
+        
+        // Show placeholder chart
+        this.dcaChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['Start Your DCA Journey'],
+            datasets: [{
+              label: 'Total Sats Accumulated',
+              data: [0],
+              borderColor: '#FF9500',
+              backgroundColor: placeholderGradient,
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 8,
+              pointBackgroundColor: '#FFFFFF',
+              pointBorderColor: '#FF9500',
+              pointBorderWidth: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#FFFFFF',
+                bodyColor: '#FFFFFF',
                 borderColor: '#FF9500',
-                backgroundColor: placeholderGradient,
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 8,
-                pointBackgroundColor: '#FFFFFF',
-                pointBorderColor: '#FF9500',
-                pointBorderWidth: 3
-              }]
+                borderWidth: 2,
+                cornerRadius: 8
+              }
             },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                  titleColor: '#FFFFFF',
-                  bodyColor: '#FFFFFF',
-                  borderColor: '#FF9500',
-                  borderWidth: 2,
-                  cornerRadius: 8
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  color: '#666666',
+                  font: { size: 12, weight: '500' }
                 }
               },
-              scales: {
-                x: {
-                  grid: { display: false },
-                  ticks: {
-                    color: '#666666',
-                    font: { size: 12, weight: '500' }
-                  }
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(255, 149, 0, 0.1)',
+                  drawBorder: false
                 },
-                y: {
-                  beginAtZero: true,
-                  grid: {
-                    color: 'rgba(255, 149, 0, 0.1)',
-                    drawBorder: false
-                  },
-                  ticks: {
-                    color: '#666666',
-                    font: { size: 12, weight: '500' },
-                    callback: function(value) {
-                      return value.toLocaleString() + ' sats'
-                    }
+                ticks: {
+                  color: '#666666',
+                  font: { size: 12, weight: '500' },
+                  callback: function(value) {
+                    return value.toLocaleString() + ' sats'
                   }
                 }
               }
             }
-          })
-          return
-        }
-
-        // Group cost basis data by date to avoid duplicates
-        const groupedData = new Map()
-        costBasisData.forEach(point => {
-          const dateStr = new Date(point.date).toDateString()
-          if (!groupedData.has(dateStr)) {
-            groupedData.set(dateStr, point)
-          } else {
-            // Use the latest cumulative values for the same date
-            const existing = groupedData.get(dateStr)
-            if (point.cumulative_sats > existing.cumulative_sats) {
-              groupedData.set(dateStr, point)
-            }
           }
         })
-
-        const chartData = Array.from(groupedData.values()).sort((a, b) =>
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        )
-
-        const labels = chartData.map(point => {
-          // Handle different date formats with enhanced timezone handling
-          let date;
-          if (point.date) {
-            console.log('Raw date from API:', point.date); // Debug the actual date string
-            
-            // If it's an ISO string with timezone info, parse it correctly
-            if (typeof point.date === 'string' && point.date.includes('T')) {
-              // ISO string - parse and convert to local date
-              date = new Date(point.date);
-              // For display purposes, use the date part only to avoid timezone shifts
-              const localDateStr = date.getFullYear() + '-' + 
-                                  String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                                  String(date.getDate()).padStart(2, '0');
-              date = new Date(localDateStr + 'T00:00:00'); // Force local midnight
-            } else {
-              date = new Date(point.date);
-            }
-            
-            // Check if date is valid
-            if (isNaN(date.getTime())) {
-              date = new Date();
-            }
-          } else {
-            date = new Date();
-          }
-          
-          console.log('Formatted date:', date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-          
-          return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric'
-          })
-        })
-        const cumulativeSats = chartData.map(point => point.cumulative_sats)
-
-        this.createChart(labels, cumulativeSats)
         return
       }
-
-      // Calculate running totals for timeline data
-      let runningSats = 0
-      const labels = []
-      const cumulativeSats = []
-
-      timelineData.forEach(point => {
-        runningSats += point.sats
-
-        const date = new Date(point.date)
-        if (!isNaN(date.getTime())) {
-          labels.push(date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric'
-          }))
-          cumulativeSats.push(runningSats)
+      
+      // Group cost_basis_history by date to eliminate duplicates
+      const groupedData = new Map()
+      chartData.forEach(point => {
+        const dateStr = new Date(point.date).toDateString()
+        if (!groupedData.has(dateStr)) {
+          groupedData.set(dateStr, point)
+        } else {
+          // Use the latest cumulative values for the same date
+          const existing = groupedData.get(dateStr)
+          if (point.cumulative_sats > existing.cumulative_sats) {
+            groupedData.set(dateStr, point)
+          }
         }
       })
+      
+      const uniqueChartData = Array.from(groupedData.values()).sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      )
+      
+      const labels = uniqueChartData.map(point => {
+        // Handle different date formats with enhanced timezone handling
+        let date;
+        if (point.date) {
+          console.log('Raw date from API:', point.date); // Debug the actual date string
+          
+          // If it's an ISO string with timezone info, parse it correctly
+          if (typeof point.date === 'string' && point.date.includes('T')) {
+            // ISO string - parse and convert to local date
+            date = new Date(point.date);
+            // For display purposes, use the date part only to avoid timezone shifts
+            const localDateStr = date.getFullYear() + '-' + 
+                                String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                String(date.getDate()).padStart(2, '0');
+            date = new Date(localDateStr + 'T00:00:00'); // Force local midnight
+          } else {
+            date = new Date(point.date);
+          }
+          
+          // Check if date is valid
+          if (isNaN(date.getTime())) {
+            date = new Date();
+          }
+        } else {
+          date = new Date();
+        }
+        
+        console.log('Formatted date:', date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        })
+      })
+      const cumulativeSats = uniqueChartData.map(point => point.cumulative_sats)
 
       this.createChart(labels, cumulativeSats)
     },

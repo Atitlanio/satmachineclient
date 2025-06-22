@@ -90,7 +90,7 @@ The global `this.g` object provides access to:
 
 ## Configuration Files
 
-- `config.json` - Extension configuration (name: "DCA Admin")
+- `config.json` - Extension configuration (name: "DCA Client")
 - `manifest.json` - Extension manifest for installation
 - `pyproject.toml` - Python dependencies and tool configuration
 - `package.json` - JavaScript dependencies

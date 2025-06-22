@@ -15,7 +15,7 @@ logger.debug(
 )
 
 
-satmachineclient_ext: APIRouter = APIRouter(prefix="/satmachineclient", tags=["DCA Admin"])
+satmachineclient_ext: APIRouter = APIRouter(prefix="/satmachineclient", tags=["DCA Client"])
 satmachineclient_ext.include_router(satmachineclient_generic_router)
 satmachineclient_ext.include_router(satmachineclient_api_router)
 

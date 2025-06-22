@@ -1,4 +1,4 @@
-# DCA Admin Extension - Technical Specification
+# DCA Client Extension - Technical Specification
 
 ## Goal
 

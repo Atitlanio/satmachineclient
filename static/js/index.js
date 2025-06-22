@@ -4,7 +4,7 @@ window.app = Vue.createApp({
   delimiters: ['${', '}'],
   data: function () {
     return {
-      // DCA Admin Data
+      // DCA Client Data
       dcaClients: [],
       deposits: [],
       lamassuTransactions: [],

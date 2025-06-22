@@ -1,4 +1,4 @@
-# DCA Admin Extension Database Migrations
+# DCA Client Extension Database Migrations
 # Creates all necessary tables for Dollar Cost Averaging administration
 # with Lamassu ATM integration
 

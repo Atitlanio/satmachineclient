@@ -1,4 +1,4 @@
-# Description: DCA Admin page endpoints.
+# Description: DCA Client page endpoints.
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -13,7 +13,7 @@ def satmachineclient_renderer():
     return template_renderer(["satmachineclient/templates"])
 
 
-# DCA Admin page
+# DCA Client page
 @satmachineclient_generic_router.get("/", response_class=HTMLResponse)
 async def index(req: Request, user: User = Depends(check_user_exists)):
     return satmachineclient_renderer().TemplateResponse(

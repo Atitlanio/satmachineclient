@@ -1,4 +1,4 @@
-# DCA Admin Extension for LNBits
+# DCA Client Extension for LNBits
 
 A Dollar Cost Averaging (DCA) administration extension for LNBits that integrates with Lamassu ATM machines to automatically distribute Bitcoin to registered clients based on their deposit balances.
 
@@ -49,7 +49,7 @@ This extension enables automated Bitcoin distribution from Lamassu ATM transacti
 ### Database Setup
 
 1. **Configure Lamassu Database Connection**
-   - Navigate to the DCA Admin extension
+   - Navigate to the DCA Client extension
    - Click "Configure Database" in the sidebar
    - Enter your Lamassu PostgreSQL connection details:
      - Host and port

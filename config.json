@@ -1,5 +1,5 @@
 {
-  "name": "DCA Admin",
+  "name": "DCA Client",
   "short_description": "Dollar Cost Averaging administration for Lamassu ATM integration",
   "tile": "/satmachineclient/static/image/aio.png",
   "min_lnbits_version": "1.0.0",

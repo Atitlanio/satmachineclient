@@ -18,7 +18,7 @@ from .transaction_processor import poll_lamassu_transactions
 async def wait_for_paid_invoices():
     """Invoice listener for DCA-related payments"""
     invoice_queue = asyncio.Queue()
-    register_invoice_listener(invoice_queue, "ext_satmachineadmin")
+    register_invoice_listener(invoice_queue, "ext_satmachineclient")
     while True:
         payment = await invoice_queue.get()
         await on_invoice_paid(payment)

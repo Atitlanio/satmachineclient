@@ -43,7 +43,7 @@ from .models import (
     StoredLamassuTransaction
 )
 
-satmachineadmin_api_router = APIRouter()
+satmachineclient_api_router = APIRouter()
 
 
 ###################################################
@@ -52,7 +52,7 @@ satmachineadmin_api_router = APIRouter()
 
 # DCA Client Endpoints
 
-@satmachineadmin_api_router.get("/api/v1/dca/clients")
+@satmachineclient_api_router.get("/api/v1/dca/clients")
 async def api_get_dca_clients(
     wallet: WalletTypeInfo = Depends(require_invoice_key),
 ) -> list[DcaClient]:
@@ -60,7 +60,7 @@ async def api_get_dca_clients(
     return await get_dca_clients()
 
 
-@satmachineadmin_api_router.get("/api/v1/dca/clients/{client_id}")
+@satmachineclient_api_router.get("/api/v1/dca/clients/{client_id}")
 async def api_get_dca_client(
     client_id: str,
     wallet: WalletTypeInfo = Depends(require_invoice_key),
@@ -78,7 +78,7 @@ async def api_get_dca_client(
 # Admin extension only reads existing clients and manages their deposits
 
 # TEMPORARY: Test client creation endpoint (remove in production)
-@satmachineadmin_api_router.post("/api/v1/dca/clients", status_code=HTTPStatus.CREATED)
+@satmachineclient_api_router.post("/api/v1/dca/clients", status_code=HTTPStatus.CREATED)
 async def api_create_test_dca_client(
     data: CreateDcaClientData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -87,7 +87,7 @@ async def api_create_test_dca_client(
     return await create_dca_client(data)
 
 
-@satmachineadmin_api_router.get("/api/v1/dca/clients/{client_id}/balance")
+@satmachineclient_api_router.get("/api/v1/dca/clients/{client_id}/balance")
 async def api_get_client_balance(
     client_id: str,
     wallet: WalletTypeInfo = Depends(require_invoice_key),
@@ -104,7 +104,7 @@ async def api_get_client_balance(
 
 # DCA Deposit Endpoints
 
-@satmachineadmin_api_router.get("/api/v1/dca/deposits")
+@satmachineclient_api_router.get("/api/v1/dca/deposits")
 async def api_get_deposits(
     wallet: WalletTypeInfo = Depends(require_invoice_key),
 ) -> list[DcaDeposit]:
@@ -112,7 +112,7 @@ async def api_get_deposits(
     return await get_all_deposits()
 
 
-@satmachineadmin_api_router.get("/api/v1/dca/deposits/{deposit_id}")
+@satmachineclient_api_router.get("/api/v1/dca/deposits/{deposit_id}")
 async def api_get_deposit(
     deposit_id: str,
     wallet: WalletTypeInfo = Depends(require_invoice_key),
@@ -126,7 +126,7 @@ async def api_get_deposit(
     return deposit
 
 
-@satmachineadmin_api_router.post("/api/v1/dca/deposits", status_code=HTTPStatus.CREATED)
+@satmachineclient_api_router.post("/api/v1/dca/deposits", status_code=HTTPStatus.CREATED)
 async def api_create_deposit(
     data: CreateDepositData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -142,7 +142,7 @@ async def api_create_deposit(
     return await create_deposit(data)
 
 
-@satmachineadmin_api_router.put("/api/v1/dca/deposits/{deposit_id}/status")
+@satmachineclient_api_router.put("/api/v1/dca/deposits/{deposit_id}/status")
 async def api_update_deposit_status(
     deposit_id: str,
     data: UpdateDepositStatusData,
@@ -165,7 +165,7 @@ async def api_update_deposit_status(
 
 # Transaction Polling Endpoints
 
-@satmachineadmin_api_router.post("/api/v1/dca/test-connection")
+@satmachineclient_api_router.post("/api/v1/dca/test-connection")
 async def api_test_database_connection(
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ):
@@ -188,7 +188,7 @@ async def api_test_database_connection(
         }
 
 
-@satmachineadmin_api_router.post("/api/v1/dca/manual-poll")
+@satmachineclient_api_router.post("/api/v1/dca/manual-poll")
 async def api_manual_poll(
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ):
@@ -234,7 +234,7 @@ async def api_manual_poll(
         )
 
 
-@satmachineadmin_api_router.post("/api/v1/dca/test-transaction")
+@satmachineclient_api_router.post("/api/v1/dca/test-transaction")
 async def api_test_transaction(
     wallet: WalletTypeInfo = Depends(require_admin_key),
     crypto_atoms: int = 103,
@@ -296,7 +296,7 @@ async def api_test_transaction(
 
 # Lamassu Transaction Endpoints
 
-@satmachineadmin_api_router.get("/api/v1/dca/transactions")
+@satmachineclient_api_router.get("/api/v1/dca/transactions")
 async def api_get_lamassu_transactions(
     wallet: WalletTypeInfo = Depends(require_invoice_key),
 ) -> list[StoredLamassuTransaction]:
@@ -304,7 +304,7 @@ async def api_get_lamassu_transactions(
     return await get_all_lamassu_transactions()
 
 
-@satmachineadmin_api_router.get("/api/v1/dca/transactions/{transaction_id}")
+@satmachineclient_api_router.get("/api/v1/dca/transactions/{transaction_id}")
 async def api_get_lamassu_transaction(
     transaction_id: str,
     wallet: WalletTypeInfo = Depends(require_invoice_key),
@@ -318,7 +318,7 @@ async def api_get_lamassu_transaction(
     return transaction
 
 
-@satmachineadmin_api_router.get("/api/v1/dca/transactions/{transaction_id}/distributions")
+@satmachineclient_api_router.get("/api/v1/dca/transactions/{transaction_id}/distributions")
 async def api_get_transaction_distributions(
     transaction_id: str,
     wallet: WalletTypeInfo = Depends(require_invoice_key),
@@ -356,7 +356,7 @@ async def api_get_transaction_distributions(
 
 # Lamassu Configuration Endpoints
 
-@satmachineadmin_api_router.get("/api/v1/dca/config")
+@satmachineclient_api_router.get("/api/v1/dca/config")
 async def api_get_lamassu_config(
     wallet: WalletTypeInfo = Depends(require_invoice_key),
 ) -> Optional[LamassuConfig]:
@@ -364,7 +364,7 @@ async def api_get_lamassu_config(
     return await get_active_lamassu_config()
 
 
-@satmachineadmin_api_router.post("/api/v1/dca/config", status_code=HTTPStatus.CREATED)
+@satmachineclient_api_router.post("/api/v1/dca/config", status_code=HTTPStatus.CREATED)
 async def api_create_lamassu_config(
     data: CreateLamassuConfigData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -373,7 +373,7 @@ async def api_create_lamassu_config(
     return await create_lamassu_config(data)
 
 
-@satmachineadmin_api_router.put("/api/v1/dca/config/{config_id}")
+@satmachineclient_api_router.put("/api/v1/dca/config/{config_id}")
 async def api_update_lamassu_config(
     config_id: str,
     data: UpdateLamassuConfigData,
@@ -394,7 +394,7 @@ async def api_update_lamassu_config(
     return updated_config
 
 
-@satmachineadmin_api_router.delete("/api/v1/dca/config/{config_id}")
+@satmachineclient_api_router.delete("/api/v1/dca/config/{config_id}")
 async def api_delete_lamassu_config(
     config_id: str,
     wallet: WalletTypeInfo = Depends(require_admin_key),

@@ -10,7 +10,7 @@ async def m001_initial_dca_schema(db):
     # DCA Clients table
     await db.execute(
         f"""
-        CREATE TABLE satmachineadmin.dca_clients (
+        CREATE TABLE satmachineclient.dca_clients (
             id TEXT PRIMARY KEY NOT NULL,
             user_id TEXT NOT NULL,
             wallet_id TEXT NOT NULL,
@@ -27,7 +27,7 @@ async def m001_initial_dca_schema(db):
     # DCA Deposits table
     await db.execute(
         f"""
-        CREATE TABLE satmachineadmin.dca_deposits (
+        CREATE TABLE satmachineclient.dca_deposits (
             id TEXT PRIMARY KEY NOT NULL,
             client_id TEXT NOT NULL,
             amount INTEGER NOT NULL,
@@ -43,7 +43,7 @@ async def m001_initial_dca_schema(db):
     # DCA Payments table
     await db.execute(
         f"""
-        CREATE TABLE satmachineadmin.dca_payments (
+        CREATE TABLE satmachineclient.dca_payments (
             id TEXT PRIMARY KEY NOT NULL,
             client_id TEXT NOT NULL,
             amount_sats INTEGER NOT NULL,
@@ -61,7 +61,7 @@ async def m001_initial_dca_schema(db):
     # Lamassu Configuration table
     await db.execute(
         f"""
-        CREATE TABLE satmachineadmin.lamassu_config (
+        CREATE TABLE satmachineclient.lamassu_config (
             id TEXT PRIMARY KEY NOT NULL,
             host TEXT NOT NULL,
             port INTEGER NOT NULL DEFAULT 5432,
@@ -90,7 +90,7 @@ async def m001_initial_dca_schema(db):
     # Lamassu Transactions table (for audit trail)
     await db.execute(
         f"""
-        CREATE TABLE satmachineadmin.lamassu_transactions (
+        CREATE TABLE satmachineclient.lamassu_transactions (
             id TEXT PRIMARY KEY NOT NULL,
             lamassu_transaction_id TEXT NOT NULL UNIQUE,
             fiat_amount INTEGER NOT NULL,

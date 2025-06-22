@@ -1,7 +1,7 @@
 {
   "name": "DCA Admin",
   "short_description": "Dollar Cost Averaging administration for Lamassu ATM integration",
-  "tile": "/satmachineadmin/static/image/aio.png",
+  "tile": "/satmachineclient/static/image/aio.png",
   "min_lnbits_version": "1.0.0",
   "contributors": [
     {
@@ -26,7 +26,7 @@
     }
   ],
   "images": [],
-  "description_md": "/satmachineadmin/description.md",
-  "terms_and_conditions_md": "/satmachineadmin/toc.md",
+  "description_md": "/satmachineclient/description.md",
+  "terms_and_conditions_md": "/satmachineclient/toc.md",
   "license": "MIT"
 }

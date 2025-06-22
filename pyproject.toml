@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "satmachineadmin"
-version = "0.0.0"
-description = "Eightball is a simple API that allows you to create a random number generator."
-authors = ["benarc", "dni <dni@lnbits.com>"]
+name = "Satoshi Machine Client"
+version = "0.0.1"
+description = "This acts as a dashboard for Satoshi Machine Lamassu ATM Liquidity Providers"
+authors = ["PatMulligan <patjmulligan@protonmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10 | ^3.9"

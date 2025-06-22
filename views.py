@@ -6,16 +6,16 @@ from lnbits.core.models import User
 from lnbits.decorators import check_user_exists
 from lnbits.helpers import template_renderer
 
-satmachineadmin_generic_router = APIRouter()
+satmachineclient_generic_router = APIRouter()
 
 
-def satmachineadmin_renderer():
-    return template_renderer(["satmachineadmin/templates"])
+def satmachineclient_renderer():
+    return template_renderer(["satmachineclient/templates"])
 
 
 # DCA Admin page
-@satmachineadmin_generic_router.get("/", response_class=HTMLResponse)
+@satmachineclient_generic_router.get("/", response_class=HTMLResponse)
 async def index(req: Request, user: User = Depends(check_user_exists)):
-    return satmachineadmin_renderer().TemplateResponse(
-        "satmachineadmin/index.html", {"request": req, "user": user.json()}
+    return satmachineclient_renderer().TemplateResponse(
+        "satmachineclient/index.html", {"request": req, "user": user.json()}
     )

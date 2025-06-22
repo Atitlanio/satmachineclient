@@ -4,7 +4,7 @@
 
 {% extends "base.html" %} {% from "macros.jinja" import window_vars with context
 %} {% block scripts %} {{ window_vars(user) }}
-<script src="{{ static_url_for('satmachineadmin/static', path='js/index.js') }}"></script>
+<script src="{{ static_url_for('satmachineclient/static', path='js/index.js') }}"></script>
 {% endblock %} {% block page %}
 <div class="row q-col-gutter-md" id="dcaAdmin">
   <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
@@ -367,7 +367,7 @@
             </q-card-section>
           </q-expansion-item>
           <q-separator></q-separator>
-          {% include "satmachineadmin/_api_docs.html" %}
+          {% include "satmachineclient/_api_docs.html" %}
         </q-list>
       </q-card-section>
     </q-card>

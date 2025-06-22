@@ -327,7 +327,7 @@ window.app = Vue.createApp({
         placeholderGradient.addColorStop(0, 'rgba(255, 149, 0, 0.3)')
         placeholderGradient.addColorStop(1, 'rgba(255, 149, 0, 0.05)')
         
-        // Show placeholder chart
+        // Show placeholder chart with enhanced styling
         this.dcaChart = new Chart(ctx, {
           type: 'line',
           data: {
@@ -343,7 +343,8 @@ window.app = Vue.createApp({
               pointRadius: 8,
               pointBackgroundColor: '#FFFFFF',
               pointBorderColor: '#FF9500',
-              pointBorderWidth: 3
+              pointBorderWidth: 3,
+              pointHoverRadius: 10
             }]
           },
           options: {
@@ -357,7 +358,12 @@ window.app = Vue.createApp({
                 bodyColor: '#FFFFFF',
                 borderColor: '#FF9500',
                 borderWidth: 2,
-                cornerRadius: 8
+                cornerRadius: 8,
+                callbacks: {
+                  label: function(context) {
+                    return `${context.parsed.y.toLocaleString()} sats`
+                  }
+                }
               }
             },
             scales: {

@@ -54,7 +54,8 @@ window.app = Vue.createApp({
       },
       chartTimeRange: '30d',
       dcaChart: null,
-      analyticsData: null
+      analyticsData: null,
+      chartLoading: false
     }
   },
 
@@ -207,8 +208,12 @@ window.app = Vue.createApp({
       return Math.min(Math.max(progress, 0), 100)
     },
     async loadChartData() {
+      // Prevent multiple simultaneous requests
+      if (this.chartLoading) return
+      
       try {
-        const { data } = await LNbits.api.request(
+        this.chartLoading = true
+        const {data} = await LNbits.api.request(
           'GET',
           `/satmachineclient/api/v1/dashboard/analytics?time_range=${this.chartTimeRange}`,
           this.g.user.wallets[0].inkey
@@ -221,12 +226,20 @@ window.app = Vue.createApp({
         }
 
         this.analyticsData = data
-        // Use nextTick to ensure DOM is ready
+        // Use nextTick to ensure DOM is ready, with retry logic
         this.$nextTick(() => {
           this.initDCAChart()
+          // If chart ref still not available, try again shortly
+          if (!this.$refs.dcaChart) {
+            setTimeout(() => {
+              this.initDCAChart()
+            }, 100)
+          }
         })
       } catch (error) {
         console.error('Error loading chart data:', error)
+      } finally {
+        this.chartLoading = false
       }
     },
 
@@ -241,7 +254,13 @@ window.app = Vue.createApp({
       }
 
       if (!this.$refs.dcaChart) {
-        console.log('No chart ref available')
+        console.log('No chart ref available, waiting for DOM...')
+        // Try again after DOM update
+        this.$nextTick(() => {
+          if (this.$refs.dcaChart) {
+            this.initDCAChart()
+          }
+        })
         return
       }
 
@@ -250,10 +269,14 @@ window.app = Vue.createApp({
         console.error('Chart.js is not loaded')
         return
       }
+      
+      console.log('Chart.js version:', Chart.version || 'unknown')
+      console.log('Chart.js available:', typeof Chart)
 
       // Destroy existing chart
       if (this.dcaChart) {
         this.dcaChart.destroy()
+        this.dcaChart = null
       }
 
       const ctx = this.$refs.dcaChart.getContext('2d')
@@ -270,7 +293,10 @@ window.app = Vue.createApp({
         const cumulativeSats = []
         
         timelineData.forEach(point => {
-          runningSats += point.sats
+          // Ensure sats is a valid number
+          const sats = point.sats || 0
+          const validSats = typeof sats === 'number' ? sats : parseFloat(sats) || 0
+          runningSats += validSats
           
           const date = new Date(point.date)
           if (!isNaN(date.getTime())) {
@@ -281,6 +307,8 @@ window.app = Vue.createApp({
             cumulativeSats.push(runningSats)
           }
         })
+        
+        console.log('Timeline chart data:', { labels, cumulativeSats })
         
         this.createChart(labels, cumulativeSats)
         return
@@ -413,21 +441,61 @@ window.app = Vue.createApp({
           day: 'numeric'
         })
       })
-      const cumulativeSats = uniqueChartData.map(point => point.cumulative_sats)
+      const cumulativeSats = uniqueChartData.map(point => {
+        // Ensure cumulative_sats is a valid number
+        const sats = point.cumulative_sats || 0
+        return typeof sats === 'number' ? sats : parseFloat(sats) || 0
+      })
+      
+      console.log('Final chart data:', { labels, cumulativeSats })
+      console.log('Labels array:', labels)
+      console.log('CumulativeSats array:', cumulativeSats)
+      
+      // Validate data before creating chart
+      if (labels.length === 0 || cumulativeSats.length === 0) {
+        console.warn('No valid data for chart, skipping creation')
+        return
+      }
+      
+      if (labels.length !== cumulativeSats.length) {
+        console.warn('Mismatched data arrays:', { labelsLength: labels.length, dataLength: cumulativeSats.length })
+        return
+      }
+      
+      // Check for any invalid values in cumulativeSats
+      const hasInvalidValues = cumulativeSats.some(val => val === null || val === undefined || isNaN(val))
+      if (hasInvalidValues) {
+        console.warn('Invalid values found in cumulative sats:', cumulativeSats)
+        return
+      }
 
       this.createChart(labels, cumulativeSats)
     },
 
     createChart(labels, cumulativeSats) {
+      if (!this.$refs.dcaChart) {
+        console.log('Chart ref not available for createChart')
+        return
+      }
+      
+      // Destroy existing chart
+      if (this.dcaChart) {
+        this.dcaChart.destroy()
+        this.dcaChart = null
+      }
+      
       const ctx = this.$refs.dcaChart.getContext('2d')
       
-      // Create gradient for the area fill
-      const gradient = ctx.createLinearGradient(0, 0, 0, 300)
-      gradient.addColorStop(0, 'rgba(255, 149, 0, 0.4)')
-      gradient.addColorStop(0.5, 'rgba(255, 149, 0, 0.2)')
-      gradient.addColorStop(1, 'rgba(255, 149, 0, 0.05)')
-      
-      this.dcaChart = new Chart(ctx, {
+      try {
+        // Create gradient for the area fill
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300)
+        gradient.addColorStop(0, 'rgba(255, 149, 0, 0.4)')
+        gradient.addColorStop(0.5, 'rgba(255, 149, 0, 0.2)')
+        gradient.addColorStop(1, 'rgba(255, 149, 0, 0.05)')
+        
+        // Small delay to ensure Chart.js is fully initialized
+        setTimeout(() => {
+          this.dcaChart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: labels,
@@ -526,6 +594,12 @@ window.app = Vue.createApp({
           }
         }
       })
+          console.log('Chart created successfully in createChart!')
+        }, 50)
+      } catch (error) {
+        console.error('Error creating Chart.js chart in createChart:', error)
+        console.log('Chart data that failed:', { labels, cumulativeSats })
+      }
     }
   },
 
@@ -546,10 +620,18 @@ window.app = Vue.createApp({
   },
 
   mounted() {
-    // Initialize chart after DOM is ready
+    // Initialize chart after DOM is ready and data is loaded
     this.$nextTick(() => {
-      if (this.analyticsData) {
+      console.log('Component mounted, checking for chart initialization')
+      console.log('Loading state:', this.loading)
+      console.log('Chart ref available:', !!this.$refs.dcaChart)
+      console.log('Analytics data available:', !!this.analyticsData)
+      
+      if (this.analyticsData && this.$refs.dcaChart) {
+        console.log('Initializing chart from mounted hook')
         this.initDCAChart()
+      } else {
+        console.log('Chart will initialize after data loads')
       }
     })
   },
@@ -557,6 +639,20 @@ window.app = Vue.createApp({
   computed: {
     hasData() {
       return this.dashboardData && !this.loading
+    }
+  },
+
+  watch: {
+    analyticsData: {
+      handler(newData) {
+        if (newData) {
+          console.log('Analytics data changed, initializing chart...')
+          this.$nextTick(() => {
+            this.initDCAChart()
+          })
+        }
+      },
+      immediate: false
     }
   }
 })

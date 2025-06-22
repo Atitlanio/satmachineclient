@@ -4,7 +4,7 @@
 
 {% extends "base.html" %} {% from "macros.jinja" import window_vars with context
 %} {% block scripts %} {{ window_vars(user) }}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script src="{{ static_url_for('satmachineclient/static', path='js/index.js') }}"></script>
 {% endblock %} {% block page %}
 <div class="row q-col-gutter-md" id="dcaClient">
@@ -214,32 +214,38 @@
         </q-card-section>
       </q-card>
 
-      <!-- DCA Performance Chart -->
-      <q-card class="q-mb-md">
-        <q-card-section>
-          <h6 class="text-subtitle2 q-my-none q-mb-md">Bitcoin Accumulation Progress</h6>
-          <div class="chart-container" style="position: relative; height: 300px;">
-            <canvas ref="dcaChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- DCA Performance Chart - Always render to ensure canvas is available -->
+    <q-card class="q-mb-md">
+      <q-card-section>
+        <h6 class="text-subtitle2 q-my-none q-mb-md">Bitcoin Accumulation Progress</h6>
+        <div class="chart-container" style="position: relative; height: 300px;">
+          <canvas ref="dcaChart" style="max-height: 300px;"></canvas>
+        </div>
+        <div class="row q-mt-sm">
+          <div class="col">
+            <q-btn-toggle
+              v-model="chartTimeRange"
+              @update:model-value="loadChartData"
+              toggle-color="orange"
+              :options="[
+                {label: '7D', value: '7d'},
+                {label: '30D', value: '30d'},
+                {label: '90D', value: '90d'},
+                {label: 'ALL', value: 'all'}
+              ]"
+              size="sm"
+              flat
+              :disable="chartLoading"
+            />
           </div>
-          <div class="row q-mt-sm">
-            <div class="col">
-              <q-btn-toggle
-                v-model="chartTimeRange"
-                @update:model-value="loadChartData"
-                toggle-color="orange"
-                :options="[
-                  {label: '7D', value: '7d'},
-                  {label: '30D', value: '30d'},
-                  {label: '90D', value: '90d'},
-                  {label: 'ALL', value: 'all'}
-                ]"
-                size="sm"
-                flat
-              />
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- Dashboard Content -->
+    <div v-if="hasData">
 
       <!-- Transaction History -->
       <q-card>

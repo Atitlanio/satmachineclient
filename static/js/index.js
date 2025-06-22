@@ -209,10 +209,21 @@ window.app = Vue.createApp({
     },
     async loadChartData() {
       // Prevent multiple simultaneous requests
-      if (this.chartLoading) return
+      if (this.chartLoading) {
+        console.log('Chart already loading, ignoring request')
+        return
+      }
       
       try {
         this.chartLoading = true
+        
+        // Destroy existing chart immediately to prevent conflicts
+        if (this.dcaChart) {
+          console.log('Destroying existing chart before loading new data')
+          this.dcaChart.destroy()
+          this.dcaChart = null
+        }
+        
         const {data} = await LNbits.api.request(
           'GET',
           `/satmachineclient/api/v1/dashboard/analytics?time_range=${this.chartTimeRange}`,
@@ -226,19 +237,19 @@ window.app = Vue.createApp({
         }
 
         this.analyticsData = data
-        // Use nextTick to ensure DOM is ready, with retry logic
-        this.$nextTick(() => {
+        
+        // Wait for DOM update and ensure we're still in loading state
+        await this.$nextTick()
+        
+        // Double-check we're still the active loading request
+        if (this.chartLoading) {
           this.initDCAChart()
-          // If chart ref still not available, try again shortly
-          if (!this.$refs.dcaChart) {
-            setTimeout(() => {
-              this.initDCAChart()
-            }, 100)
-          }
-        })
+        } else {
+          console.log('Chart loading was cancelled, skipping initialization')
+          this.chartLoading = false
+        }
       } catch (error) {
         console.error('Error loading chart data:', error)
-      } finally {
         this.chartLoading = false
       }
     },
@@ -247,7 +258,14 @@ window.app = Vue.createApp({
       console.log('initDCAChart called')
       console.log('analyticsData:', this.analyticsData)
       console.log('dcaChart ref:', this.$refs.dcaChart)
-
+      console.log('chartLoading state:', this.chartLoading)
+      
+      // Skip if we're not in a loading state (indicates this is a stale call)
+      if (!this.chartLoading && this.dcaChart) {
+        console.log('Chart already exists and not loading, skipping initialization')
+        return
+      }
+      
       if (!this.analyticsData) {
         console.log('No analytics data available')
         return
@@ -255,9 +273,9 @@ window.app = Vue.createApp({
 
       if (!this.$refs.dcaChart) {
         console.log('No chart ref available, waiting for DOM...')
-        // Try again after DOM update
+        // Try again after DOM update, but only if still loading
         this.$nextTick(() => {
-          if (this.$refs.dcaChart) {
+          if (this.$refs.dcaChart && this.chartLoading) {
             this.initDCAChart()
           }
         })
@@ -273,8 +291,9 @@ window.app = Vue.createApp({
       console.log('Chart.js version:', Chart.version || 'unknown')
       console.log('Chart.js available:', typeof Chart)
 
-      // Destroy existing chart
+      // Destroy existing chart (redundant safety check)
       if (this.dcaChart) {
+        console.log('Destroying existing chart in initDCAChart')
         this.dcaChart.destroy()
         this.dcaChart = null
       }
@@ -391,6 +410,8 @@ window.app = Vue.createApp({
             }
           }
         })
+        // Clear loading state after creating placeholder chart
+        this.chartLoading = false
         return
       }
       
@@ -479,13 +500,22 @@ window.app = Vue.createApp({
     },
 
     createChart(labels, cumulativeSats) {
+      console.log('createChart called with loading state:', this.chartLoading)
+      
       if (!this.$refs.dcaChart) {
         console.log('Chart ref not available for createChart')
         return
       }
       
+      // Skip if we're not in a loading state (indicates this is a stale call)
+      if (!this.chartLoading) {
+        console.log('Not in loading state, skipping createChart')
+        return
+      }
+      
       // Destroy existing chart
       if (this.dcaChart) {
+        console.log('Destroying existing chart in createChart')
         this.dcaChart.destroy()
         this.dcaChart = null
       }
@@ -501,110 +531,125 @@ window.app = Vue.createApp({
         
         // Small delay to ensure Chart.js is fully initialized
         setTimeout(() => {
-          this.dcaChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Total Sats Accumulated',
-            data: cumulativeSats,
-            borderColor: '#FF9500',
-            backgroundColor: gradient,
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: '#FFFFFF',
-            pointBorderColor: '#FF9500',
-            pointBorderWidth: 3,
-            pointRadius: 6,
-            pointHoverRadius: 8,
-            pointHoverBackgroundColor: '#FFFFFF',
-            pointHoverBorderColor: '#FF7700',
-            pointHoverBorderWidth: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: '#FFFFFF',
-              bodyColor: '#FFFFFF',
-              borderColor: '#FF9500',
-              borderWidth: 2,
-              cornerRadius: 8,
-              displayColors: false,
-              callbacks: {
-                title: function(context) {
-                  return `📅 ${context[0].label}`
-                },
-                label: function (context) {
-                  return `⚡ ${context.parsed.y.toLocaleString()} sats accumulated`
-                }
-              }
+          try {
+            // Final check to ensure we're still in the correct loading state
+            if (!this.chartLoading) {
+              console.log('Loading state changed during timeout, aborting chart creation')
+              return
             }
-          },
-          scales: {
-            x: {
-              display: true,
-              grid: {
-                display: false
+            
+            this.dcaChart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: 'Total Sats Accumulated',
+                  data: cumulativeSats,
+                  borderColor: '#FF9500',
+                  backgroundColor: gradient,
+                  borderWidth: 3,
+                  fill: true,
+                  tension: 0.4,
+                  pointBackgroundColor: '#FFFFFF',
+                  pointBorderColor: '#FF9500',
+                  pointBorderWidth: 3,
+                  pointRadius: 6,
+                  pointHoverRadius: 8,
+                  pointHoverBackgroundColor: '#FFFFFF',
+                  pointHoverBorderColor: '#FF7700',
+                  pointHoverBorderWidth: 4
+                }]
               },
-              ticks: {
-                color: '#666666',
-                font: {
-                  size: 12,
-                  weight: '500'
-                }
-              }
-            },
-            y: {
-              display: true,
-              beginAtZero: true,
-              grid: {
-                color: 'rgba(255, 149, 0, 0.1)',
-                drawBorder: false
-              },
-              ticks: {
-                color: '#666666',
-                font: {
-                  size: 12,
-                  weight: '500'
-                },
-                callback: function (value) {
-                  if (value >= 1000000) {
-                    return (value / 1000000).toFixed(1) + 'M sats'
-                  } else if (value >= 1000) {
-                    return (value / 1000).toFixed(0) + 'k sats'
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: false
+                  },
+                  tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#FFFFFF',
+                    bodyColor: '#FFFFFF',
+                    borderColor: '#FF9500',
+                    borderWidth: 2,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                      title: function(context) {
+                        return `📅 ${context[0].label}`
+                      },
+                      label: function (context) {
+                        return `⚡ ${context.parsed.y.toLocaleString()} sats accumulated`
+                      }
+                    }
                   }
-                  return value.toLocaleString() + ' sats'
+                },
+                scales: {
+                  x: {
+                    display: true,
+                    grid: {
+                      display: false
+                    },
+                    ticks: {
+                      color: '#666666',
+                      font: {
+                        size: 12,
+                        weight: '500'
+                      }
+                    }
+                  },
+                  y: {
+                    display: true,
+                    beginAtZero: true,
+                    grid: {
+                      color: 'rgba(255, 149, 0, 0.1)',
+                      drawBorder: false
+                    },
+                    ticks: {
+                      color: '#666666',
+                      font: {
+                        size: 12,
+                        weight: '500'
+                      },
+                      callback: function (value) {
+                        if (value >= 1000000) {
+                          return (value / 1000000).toFixed(1) + 'M sats'
+                        } else if (value >= 1000) {
+                          return (value / 1000).toFixed(0) + 'k sats'
+                        }
+                        return value.toLocaleString() + ' sats'
+                      }
+                    }
+                  }
+                },
+                interaction: {
+                  mode: 'nearest',
+                  axis: 'x',
+                  intersect: false
+                },
+                elements: {
+                  point: {
+                    hoverRadius: 8
+                  }
                 }
               }
-            }
-          },
-          interaction: {
-            mode: 'nearest',
-            axis: 'x',
-            intersect: false
-          },
-          elements: {
-            point: {
-              hoverRadius: 8
-            }
+            })
+            console.log('Chart created successfully in createChart!')
+            // Chart is now created, clear loading state
+            this.chartLoading = false
+          } catch (error) {
+            console.error('Error in createChart setTimeout:', error)
+            this.chartLoading = false
           }
-        }
-      })
-          console.log('Chart created successfully in createChart!')
         }, 50)
       } catch (error) {
         console.error('Error creating Chart.js chart in createChart:', error)
         console.log('Chart data that failed:', { labels, cumulativeSats })
+        // Clear loading state on error
+        this.chartLoading = false
       }
     }
   },
@@ -651,10 +696,14 @@ window.app = Vue.createApp({
   watch: {
     analyticsData: {
       handler(newData) {
-        if (newData) {
-          console.log('Analytics data changed, initializing chart...')
+        if (newData && !this.chartLoading && !this.dcaChart) {
+          console.log('Analytics data changed and no chart exists, initializing chart...')
           this.$nextTick(() => {
-            this.initDCAChart()
+            // Only initialize if we don't have a chart and aren't currently loading
+            if (!this.dcaChart && !this.chartLoading) {
+              this.chartLoading = true
+              this.initDCAChart()
+            }
           })
         }
       },

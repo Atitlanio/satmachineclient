@@ -43,16 +43,16 @@
             </div>
             <div class="col-12 col-md-4 q-mt-md">
               <q-circular-progress
+                show-value
+                font-size="12px"
                 :value="getMilestoneProgress()"
                 size="80px"
                 :thickness="0.25"
                 color="orange-7"
                 track-color="orange-1"
-                class="q-ma-md"
+                class="q-ma-md text-orange-8"
               >
-                <div class="text-body2 text-weight-bold text-orange-8">
-                  ${Math.round(getMilestoneProgress())}%
-                </div>
+                ${(getMilestoneProgress() || 0).toFixed(2)}%
               </q-circular-progress>
               <div class="text-body2 text-weight-medium text-grey-7">to ${getNextMilestone().name}</div>
             </div>

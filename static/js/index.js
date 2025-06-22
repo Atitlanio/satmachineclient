@@ -199,13 +199,18 @@ window.app = Vue.createApp({
     },
 
     getMilestoneProgress() {
-      if (!this.dashboardData) return 0
+      if (!this.dashboardData) {
+        console.log('getMilestoneProgress: no dashboard data')
+        return 0
+      }
       const sats = this.dashboardData.total_sats_accumulated
       const milestone = this.getNextMilestone()
 
       // Show total progress toward the next milestone (from 0)
       const progress = (sats / milestone.target) * 100
-      return Math.min(Math.max(progress, 0), 100)
+      const result = Math.min(Math.max(progress, 0), 100)
+      console.log('getMilestoneProgress:', { sats, milestone, progress, result })
+      return result
     },
     async loadChartData() {
       // Prevent multiple simultaneous requests

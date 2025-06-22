@@ -35,8 +35,19 @@
             <div class="col-12 col-md-8">
               <div class="text-h4 text-orange-8 q-mb-sm">
                 ⚡ ${formatSats(dashboardData.total_sats_accumulated)}
+                <q-spinner-gears 
+                  v-if="dashboardData.current_fiat_balance > 0 && dashboardData.dca_status === 'active'"
+                  color="orange-7" 
+                  size="1.2em" 
+                  class="q-ml-sm"
+                />
               </div>
-              <div class="text-h6 text-grey-7 q-mb-xs">stacked and growing!</div>
+              <div class="text-h6 text-grey-7 q-mb-xs">
+                stacked and growing!
+                <span v-if="dashboardData.current_fiat_balance > 0 && dashboardData.dca_status === 'active'" class="text-orange-7 q-ml-xs">
+                  • actively stacking
+                </span>
+              </div>
               <div class="text-caption text-grey-6">
                 ${dashboardData.total_transactions} DCA ${dashboardData.total_transactions === 1 ? 'purchase' : 'purchases'} • <span class="text-weight-bold text-blue-8">${dashboardData.dca_mode}</span> mode
               </div>

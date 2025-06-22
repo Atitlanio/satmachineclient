@@ -125,7 +125,6 @@
             <div class="col-12 col-md-6">
               <q-card flat class="bg-orange-1">
                 <q-card-section class="text-center q-pa-md">
-                  <q-icon name="account_balance" size="2em" class="text-orange-6 q-mb-sm" />
                   <div class="text-h5 text-orange-8">${formatCurrencyWithCode(dashboardData.current_sats_fiat_value, dashboardData.currency)}</div>
                   <div class="text-caption text-orange-7 q-mb-xs">Current Bitcoin Value</div>
                   <div class="text-caption text-grey">at today's ${dashboardData.currency} rate</div>
@@ -135,14 +134,8 @@
             <div class="col-12 col-md-6">
               <q-card flat :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'bg-green-1' : 'bg-red-1'">
                 <q-card-section class="text-center q-pa-md">
-                  <q-icon 
-                    :name="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'trending_up' : 'trending_down'" 
-                    size="2em" 
-                    :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-6' : 'text-red-6'"
-                    class="q-mb-sm"
-                  />
                   <div class="text-h5" :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-8' : 'text-red-8'">
-                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? '+' : ''}
+                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? '📈 +' : '📉 '}
                     ${formatCurrencyWithCode((dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) - dashboardData.total_fiat_invested, dashboardData.currency)}
                   </div>
                   <div class="text-caption" :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-7' : 'text-red-7'">
@@ -261,7 +254,6 @@
             <template v-slot:body-cell-amount_sats="props">
               <q-td :props="props" class="text-center">
                 <div class="text-weight-bold text-orange-8">
-                  <q-icon name="currency_bitcoin" size="xs" class="q-mr-xs" />
                   ${formatSats(props.row.amount_sats)}
                 </div>
               </q-td>
@@ -381,10 +373,8 @@
         <q-list dense>
           <q-item>
             <q-item-section avatar>
-              <q-icon 
-                :name="dashboardData.total_sats_accumulated >= 10000 ? 'check_circle' : 'radio_button_unchecked'" 
-                :color="dashboardData.total_sats_accumulated >= 10000 ? 'positive' : 'grey-5'"
-              />
+              <div v-if="dashboardData.total_sats_accumulated >= 10000" class="text-positive text-h6">✅</div>
+              <div v-else class="text-grey-5 text-h6">⭕</div>
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-body2">10,000 sats</q-item-label>
@@ -394,10 +384,8 @@
           
           <q-item>
             <q-item-section avatar>
-              <q-icon 
-                :name="dashboardData.total_sats_accumulated >= 100000 ? 'check_circle' : 'radio_button_unchecked'" 
-                :color="dashboardData.total_sats_accumulated >= 100000 ? 'positive' : 'grey-5'"
-              />
+              <div v-if="dashboardData.total_sats_accumulated >= 100000" class="text-positive text-h6">✅</div>
+              <div v-else class="text-grey-5 text-h6">⭕</div>
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-body2">100,000 sats</q-item-label>
@@ -407,10 +395,8 @@
           
           <q-item>
             <q-item-section avatar>
-              <q-icon 
-                :name="dashboardData.total_sats_accumulated >= 1000000 ? 'check_circle' : 'radio_button_unchecked'" 
-                :color="dashboardData.total_sats_accumulated >= 1000000 ? 'positive' : 'grey-5'"
-              />
+              <div v-if="dashboardData.total_sats_accumulated >= 1000000" class="text-positive text-h6">✅</div>
+              <div v-else class="text-grey-5 text-h6">⭕</div>
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-body2">1,000,000 sats</q-item-label>
@@ -430,7 +416,7 @@
         <q-list dense>
           <q-item>
             <q-item-section avatar>
-              <q-icon name="trending_up" color="orange" size="sm" />
+              <div class="text-orange text-weight-bold">📈</div>
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-caption">
@@ -441,7 +427,7 @@
           
           <q-item>
             <q-item-section avatar>
-              <q-icon name="schedule" color="blue" size="sm" />
+              <div class="text-blue text-weight-bold">⏰</div>
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-caption">
@@ -452,7 +438,7 @@
           
           <q-item>
             <q-item-section avatar>
-              <q-icon name="security" color="green" size="sm" />
+              <div class="text-green text-weight-bold">🔐</div>
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-caption">

@@ -15,42 +15,35 @@ window.app = Vue.createApp({
           label: 'Date',
           align: 'left',
           field: row => row.transaction_time || row.created_at,
-          format: val => val,
-          sortable: true,
-          sort: (a, b, rowA, rowB) => {
-            // Sort by most recent first
-            const dateA = new Date(rowA.transaction_time || rowA.created_at);
-            const dateB = new Date(rowB.transaction_time || rowB.created_at);
-            return dateB - dateA;
-          }
+          sortable: false
         },
         {
           name: 'amount_sats',
           label: 'Bitcoin',
           align: 'right',
           field: 'amount_sats',
-          sortable: true
+          sortable: false
         },
         {
           name: 'amount_fiat',
           label: 'Fiat Amount',
           align: 'right',
           field: 'amount_fiat',
-          sortable: true
+          sortable: false
         },
         {
           name: 'type',
           label: 'Type',
           align: 'center',
           field: 'transaction_type',
-          sortable: true
+          sortable: false
         },
         {
           name: 'status',
           label: 'Status',
           align: 'center',
           field: 'status',
-          sortable: true
+          sortable: false
         }
       ],
       transactionPagination: {
@@ -125,11 +118,11 @@ window.app = Vue.createApp({
           '/satmachineclient/api/v1/dashboard/transactions?limit=50',
           this.g.user.wallets[0].inkey
         )
-        // Sort transactions by most recent first
+        // Sort by most recent first and store
         this.transactions = data.sort((a, b) => {
           const dateA = new Date(a.transaction_time || a.created_at)
           const dateB = new Date(b.transaction_time || b.created_at)
-          return dateB - dateA
+          return dateB - dateA  // Most recent first
         })
       } catch (error) {
         console.error('Error loading transactions:', error)

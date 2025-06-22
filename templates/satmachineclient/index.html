@@ -192,9 +192,9 @@
             
             <template v-slot:body-cell-date="props">
               <q-td :props="props">
-                <div>${formatDate(props.row.transaction_time || props.row.created_at)}</div>
+                <div>${formatDate(props.value)}</div>
                 <div class="text-caption text-grey">
-                  ${formatTime(props.row.transaction_time || props.row.created_at)}
+                  ${formatTime(props.value)}
                 </div>
               </q-td>
             </template>

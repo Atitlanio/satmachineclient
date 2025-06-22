@@ -6,40 +6,9 @@ from datetime import datetime, timezone
 from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
 
-from .models import (
-    CreateDcaClientData, DcaClient, UpdateDcaClientData,
-    CreateDepositData, DcaDeposit, UpdateDepositStatusData,
-    CreateDcaPaymentData, DcaPayment,
-    ClientBalanceSummary,
-    CreateLamassuConfigData, LamassuConfig, UpdateLamassuConfigData,
-    CreateLamassuTransactionData, StoredLamassuTransaction
-)
+from .models import ()
 
 db = Database("ext_satmachineclient")
-
-
-# DCA Client CRUD Operations
-async def create_dca_client(data: CreateDcaClientData) -> DcaClient:
-    client_id = urlsafe_short_hash()
-    await db.execute(
-        """
-        INSERT INTO satmachineclient.dca_clients 
-        (id, user_id, wallet_id, username, dca_mode, fixed_mode_daily_limit, status, created_at, updated_at)
-        VALUES (:id, :user_id, :wallet_id, :username, :dca_mode, :fixed_mode_daily_limit, :status, :created_at, :updated_at)
-        """,
-        {
-            "id": client_id,
-            "user_id": data.user_id,
-            "wallet_id": data.wallet_id,
-            "username": data.username,
-            "dca_mode": data.dca_mode,
-            "fixed_mode_daily_limit": data.fixed_mode_daily_limit,
-            "status": "active",
-            "created_at": datetime.now(),
-            "updated_at": datetime.now()
-        }
-    )
-    return await get_dca_client(client_id)
 
 
 async def get_dca_client(client_id: str) -> Optional[DcaClient]:
@@ -47,13 +16,6 @@ async def get_dca_client(client_id: str) -> Optional[DcaClient]:
         "SELECT * FROM satmachineclient.dca_clients WHERE id = :id",
         {"id": client_id},
         DcaClient,
-    )
-
-
-async def get_dca_clients() -> List[DcaClient]:
-    return await db.fetchall(
-        "SELECT * FROM satmachineclient.dca_clients ORDER BY created_at DESC",
-        model=DcaClient,
     )
 
 

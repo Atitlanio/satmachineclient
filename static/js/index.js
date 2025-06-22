@@ -1,18 +1,17 @@
 window.app = Vue.createApp({
+  el: '#dcaClient',
   mixins: [windowMixin],
   delimiters: ['${', '}'],
-  data() {
+  data: function () {
     return {
       dashboardData: null,
       transactions: [],
-      analytics: null,
       loading: true,
       error: null
     }
   },
 
   methods: {
-    // Utility Methods
     formatCurrency(amount) {
       if (!amount) return 'Q 0.00';
       // Convert centavos to quetzales
@@ -25,12 +24,6 @@ window.app = Vue.createApp({
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString).toLocaleDateString()
-    },
-
-    formatDateTime(dateString) {
-      if (!dateString) return ''
-      const date = new Date(dateString)
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString('en-US', { hour12: false })
     },
 
     formatSats(amount) {
@@ -87,5 +80,3 @@ window.app = Vue.createApp({
     }
   }
 })
-
-window.app.mount('#dcaClient')

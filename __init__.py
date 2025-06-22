@@ -15,7 +15,9 @@ logger.debug(
 )
 
 
-satmachineclient_ext: APIRouter = APIRouter(prefix="/satmachineclient", tags=["DCA Client"])
+satmachineclient_ext: APIRouter = APIRouter(
+    prefix="/satmachineclient", tags=["DCA Client"]
+)
 satmachineclient_ext.include_router(satmachineclient_generic_router)
 satmachineclient_ext.include_router(satmachineclient_api_router)
 
@@ -39,11 +41,15 @@ def satmachineclient_stop():
 
 def satmachineclient_start():
     # Start invoice listener task
-    invoice_task = create_permanent_unique_task("ext_satmachineclient", wait_for_paid_invoices)
+    invoice_task = create_permanent_unique_task(
+        "ext_satmachineclient", wait_for_paid_invoices
+    )
     scheduled_tasks.append(invoice_task)
-    
+
     # Start hourly transaction polling task
-    polling_task = create_permanent_unique_task("ext_satmachineclient_polling", hourly_transaction_polling)
+    polling_task = create_permanent_unique_task(
+        "ext_satmachineclient_polling", hourly_transaction_polling
+    )
     scheduled_tasks.append(polling_task)
 
 

@@ -164,13 +164,26 @@ window.app = Vue.createApp({
       }
     },
 
-    getSatsMilestoneProgress() {
+    getNextMilestone() {
+      if (!this.dashboardData) return { target: 100000, name: '100k sats' }
+      const sats = this.dashboardData.total_sats_accumulated
+      
+      if (sats < 10000) return { target: 10000, name: '10k sats' }
+      if (sats < 100000) return { target: 100000, name: '100k sats' }
+      if (sats < 500000) return { target: 500000, name: '500k sats' }
+      if (sats < 1000000) return { target: 1000000, name: '1M sats' }
+      if (sats < 2100000) return { target: 2100000, name: '2.1M sats' }
+      return { target: 21000000, name: '21M sats' }
+    },
+
+    getMilestoneProgress() {
       if (!this.dashboardData) return 0
       const sats = this.dashboardData.total_sats_accumulated
-      if (sats >= 1000000) return 100
-      if (sats >= 100000) return 75
-      if (sats >= 10000) return 50
-      return Math.min((sats / 10000) * 50, 50)
+      const milestone = this.getNextMilestone()
+      
+      // Show total progress toward the next milestone (from 0)
+      const progress = (sats / milestone.target) * 100
+      return Math.min(Math.max(progress, 0), 100)
     }
   },
 

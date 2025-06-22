@@ -27,71 +27,126 @@
 
     <!-- Dashboard Content -->
     <div v-if="hasData">
-      <!-- Summary Cards -->
-      <q-card class="q-mb-md">
-        <q-card-section>
-          <h6 class="text-subtitle1 q-my-none q-mb-md">DCA Overview</h6>
-          <div class="row q-col-gutter-md">
-            <div class="col-6 col-md-3">
-              <div class="text-center">
-                <div class="text-h6">${formatSats(dashboardData.total_sats_accumulated)}</div>
-                <div class="text-grey text-caption">Total Sats</div>
+      <!-- Hero Card - Bitcoin Stack Progress -->
+      <q-card class="q-mb-md bg-gradient-to-r from-orange-1 to-orange-2" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);">
+        <q-card-section class="text-center">
+          <div class="row items-center">
+            <div class="col-12 col-md-8">
+              <div class="text-h4 text-orange-8 q-mb-sm">
+                ⚡ ${formatSats(dashboardData.total_sats_accumulated)}
+              </div>
+              <div class="text-h6 text-grey-7 q-mb-xs">stacked and growing!</div>
+              <div class="text-caption text-grey-6">
+                ${dashboardData.total_transactions} DCA ${dashboardData.total_transactions === 1 ? 'purchase' : 'purchases'} • ${dashboardData.dca_mode} mode
               </div>
             </div>
-            <div class="col-6 col-md-3">
-              <div class="text-center">
-                <div class="text-h6">${formatCurrency(dashboardData.total_fiat_invested)}</div>
-                <div class="text-grey text-caption">Total Invested</div>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="text-center">
-                <div class="text-h6">${formatCurrency(dashboardData.current_fiat_balance)}</div>
-                <div class="text-grey text-caption">Available Balance</div>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="text-center">
-                <div class="text-h6">${dashboardData.total_transactions}</div>
-                <div class="text-grey text-caption">Transactions</div>
-              </div>
+            <div class="col-12 col-md-4 q-mt-md">
+              <q-circular-progress
+                :value="Math.min((dashboardData.total_sats_accumulated / 100000) * 100, 100)"
+                size="80px"
+                :thickness="0.2"
+                color="orange"
+                track-color="orange-2"
+                class="q-ma-md"
+              >
+                <div class="text-caption text-orange-8">
+                  ${Math.min(Math.round((dashboardData.total_sats_accumulated / 100000) * 100), 100)}%
+                </div>
+              </q-circular-progress>
+              <div class="text-caption text-grey-6">to 100k sats</div>
             </div>
           </div>
-          <!-- Fiat Value Toggle Button -->
-          <div class="row q-mt-sm">
-            <div class="col-12 text-center">
+        </q-card-section>
+      </q-card>
+
+      <!-- Key Metrics Cards -->
+      <div class="row q-col-gutter-md q-mb-md">
+        <div class="col-6 col-md-3">
+          <q-card class="text-center bg-orange-1" style="min-height: 100px;">
+            <q-card-section class="q-pa-md">
+              <div class="text-h6 text-orange-8">${formatCurrency(dashboardData.total_fiat_invested)}</div>
+              <div class="text-caption text-orange-7 text-weight-medium">Total Invested</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-6 col-md-3">
+          <q-card class="text-center bg-blue-1" style="min-height: 100px;">
+            <q-card-section class="q-pa-md">
+              <div class="text-h6 text-blue-8">${formatCurrency(dashboardData.current_fiat_balance)}</div>
+              <div class="text-caption text-blue-7 text-weight-medium">Available Balance</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-6 col-md-3">
+          <q-card class="text-center bg-green-1" style="min-height: 100px;">
+            <q-card-section class="q-pa-md">
+              <div class="text-h6 text-green-8">${dashboardData.total_transactions}</div>
+              <div class="text-caption text-green-7 text-weight-medium">DCA Sessions</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-6 col-md-3">
+          <q-card class="text-center bg-purple-1" style="min-height: 100px;">
+            <q-card-section class="q-pa-md">
+              <div class="text-h6 text-purple-8" v-if="dashboardData.average_cost_basis > 0">
+                ${Math.round(dashboardData.average_cost_basis)}
+              </div>
+              <div class="text-h6 text-purple-8" v-else>-</div>
+              <div class="text-caption text-purple-7 text-weight-medium">Avg Cost (sats/GTQ)</div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+      <!-- Bitcoin Performance Card -->
+      <q-card class="q-mb-md">
+        <q-card-section>
+          <div class="row items-center q-mb-md">
+            <div class="col">
+              <h6 class="text-subtitle2 q-my-none">
+                Bitcoin Performance
+              </h6>
+            </div>
+            <div class="col-auto">
               <q-btn 
                 flat 
                 dense
                 :color="showFiatValues ? 'orange' : 'grey'"
                 :icon="showFiatValues ? 'visibility_off' : 'attach_money'"
                 @click="showFiatValues = !showFiatValues"
+                size="sm"
               >
                 ${showFiatValues ? 'Hide' : 'Show'} Fiat Values
               </q-btn>
             </div>
           </div>
 
-          <!-- Current Value Row (Conditional) -->
-          <div v-if="showFiatValues" class="row q-col-gutter-md q-mt-sm">
+          <!-- Performance Cards (Conditional) -->
+          <div v-if="showFiatValues" class="row q-col-gutter-md">
             <div class="col-12 col-md-6">
               <q-card flat class="bg-orange-1">
-                <q-card-section class="text-center">
+                <q-card-section class="text-center q-pa-md">
+                  <q-icon name="account_balance" size="2em" class="text-orange-6 q-mb-sm" />
                   <div class="text-h5 text-orange-8">${formatCurrencyWithCode(dashboardData.current_sats_fiat_value, dashboardData.currency)}</div>
-                  <div class="text-caption text-orange-7">Current Value of Bitcoin Holdings</div>
-                  <div class="text-caption text-grey">at today's ${dashboardData.currency} exchange rate</div>
+                  <div class="text-caption text-orange-7 q-mb-xs">Current Bitcoin Value</div>
+                  <div class="text-caption text-grey">at today's ${dashboardData.currency} rate</div>
                 </q-card-section>
               </q-card>
             </div>
             <div class="col-12 col-md-6">
               <q-card flat :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'bg-green-1' : 'bg-red-1'">
-                <q-card-section class="text-center">
-                  <div class="text-h6" :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-8' : 'text-red-8'">
+                <q-card-section class="text-center q-pa-md">
+                  <q-icon 
+                    :name="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'trending_up' : 'trending_down'" 
+                    size="2em" 
+                    :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-6' : 'text-red-6'"
+                    class="q-mb-sm"
+                  />
+                  <div class="text-h5" :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-8' : 'text-red-8'">
                     ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? '+' : ''}
                     ${formatCurrencyWithCode((dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) - dashboardData.total_fiat_invested, dashboardData.currency)}
                   </div>
                   <div class="text-caption" :class="(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'text-green-7' : 'text-red-7'">
-                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'Bitcoin Appreciation vs Fiat' : 'Fiat Depreciation vs Bitcoin'}
+                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'Portfolio Growth' : 'Portfolio Change'}
                   </div>
                   <div class="text-caption text-grey">vs total invested</div>
                 </q-card-section>
@@ -99,46 +154,68 @@
             </div>
           </div>
           <!-- Pending Deposits Row -->
-          <div v-if="dashboardData.pending_fiat_deposits > 0" class="row q-col-gutter-md q-mt-sm">
-            <div class="col-12">
-              <q-banner inline-actions class="bg-orange-1 text-orange-9">
-                <template v-slot:avatar>
-                  <q-icon name="schedule" color="orange" />
-                </template>
-                <div class="text-subtitle2">
-                  <strong>${formatCurrency(dashboardData.pending_fiat_deposits)}</strong> pending deposit
-                </div>
-                <div class="text-caption">
-                  Cash waiting to be inserted into ATM for DCA processing
-                </div>
-              </q-banner>
-            </div>
+          <div v-if="dashboardData.pending_fiat_deposits > 0" class="q-mt-md">
+            <q-banner rounded class="bg-orange-1 text-orange-9">
+              <template v-slot:avatar>
+                <q-icon name="schedule" color="orange" size="md" />
+              </template>
+              <div class="text-subtitle2">
+                ⏳ <strong>${formatCurrency(dashboardData.pending_fiat_deposits)}</strong> ready to DCA
+              </div>
+              <div class="text-caption">
+                Cash waiting to be inserted into ATM for automatic Bitcoin purchases
+              </div>
+            </q-banner>
           </div>
         </q-card-section>
       </q-card>
 
-      <!-- DCA Status -->
+      <!-- DCA Status & Strategy -->
       <q-card class="q-mb-md">
         <q-card-section>
-          <h6 class="text-subtitle2 q-my-none q-mb-md">DCA Status</h6>
-          <div class="row q-col-gutter-md">
-            <div class="col-6">
-              <div class="text-body2">Mode: <strong>${dashboardData.dca_mode}</strong></div>
+          <div class="row items-center q-mb-md">
+            <div class="col">
+              <h6 class="text-subtitle2 q-my-none">
+                DCA Strategy
+              </h6>
             </div>
-            <div class="col-6">
-              <div class="text-body2">Status: 
-                <q-chip 
-                  :color="dashboardData.dca_status === 'active' ? 'positive' : 'warning'"
-                  text-color="white"
-                  size="sm"
-                >
-                  ${dashboardData.dca_status}
-                </q-chip>
-              </div>
+            <div class="col-auto">
+              <q-chip 
+                :color="dashboardData.dca_status === 'active' ? 'positive' : 'warning'"
+                text-color="white"
+                icon="circle"
+                size="sm"
+              >
+                ${dashboardData.dca_status}
+              </q-chip>
             </div>
           </div>
-          <div v-if="dashboardData.average_cost_basis > 0" class="q-mt-md">
-            <div class="text-body2">Average Cost Basis: <strong>${Math.round(dashboardData.average_cost_basis)} sats/GTQ</strong></div>
+          
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-md-6">
+              <q-card flat class="bg-blue-1">
+                <q-card-section class="q-pa-md">
+                  <div class="text-body2 text-blue-8">
+                    <strong>${dashboardData.dca_mode}</strong> Mode
+                  </div>
+                  <div class="text-caption text-blue-7 q-mt-xs">
+                    Automatic Bitcoin accumulation strategy
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
+            <div class="col-12 col-md-6" v-if="dashboardData.average_cost_basis > 0">
+              <q-card flat class="bg-purple-1">
+                <q-card-section class="q-pa-md">
+                  <div class="text-body2 text-purple-8">
+                    <strong>${Math.round(dashboardData.average_cost_basis)}</strong> sats/GTQ
+                  </div>
+                  <div class="text-caption text-purple-7 q-mt-xs">
+                    Average cost basis over time
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
           </div>
         </q-card-section>
       </q-card>
@@ -148,16 +225,22 @@
         <q-card-section>
           <div class="row items-center q-mb-md">
             <div class="col">
-              <h6 class="text-subtitle2 q-my-none">Transaction History</h6>
+              <h6 class="text-subtitle2 q-my-none">
+                DCA Transaction History
+              </h6>
+              <div class="text-caption text-grey-6">
+                Your Bitcoin accumulation journey
+              </div>
             </div>
             <div class="col-auto">
               <q-btn 
                 flat 
                 dense 
                 icon="refresh" 
-                @click="loadTransactions"
+                @click="refreshAllData"
                 :loading="loading"
                 size="sm"
+                color="orange"
               >
                 Refresh
               </q-btn>
@@ -172,18 +255,20 @@
             :loading="loading"
             flat
             bordered
-            :no-data-label="'No transactions yet - start your DCA journey!'"
+            :no-data-label="'🚀 No transactions yet - start your DCA journey!'"
+            class="q-mt-md"
           >
             <template v-slot:body-cell-amount_sats="props">
-              <q-td :props="props">
-                <div class="text-weight-medium text-orange-8">
+              <q-td :props="props" class="text-center">
+                <div class="text-weight-bold text-orange-8">
+                  <q-icon name="currency_bitcoin" size="xs" class="q-mr-xs" />
                   ${formatSats(props.row.amount_sats)}
                 </div>
               </q-td>
             </template>
             
             <template v-slot:body-cell-amount_fiat="props">
-              <q-td :props="props">
+              <q-td :props="props" class="text-center">
                 <div class="text-weight-medium">
                   ${formatCurrency(props.row.amount_fiat)}
                 </div>
@@ -192,7 +277,7 @@
             
             <template v-slot:body-cell-date="props">
               <q-td :props="props">
-                <div>${formatDate(props.value)}</div>
+                <div class="text-weight-medium">${formatDate(props.value)}</div>
                 <div class="text-caption text-grey">
                   ${formatTime(props.value)}
                 </div>
@@ -200,11 +285,12 @@
             </template>
             
             <template v-slot:body-cell-status="props">
-              <q-td :props="props">
+              <q-td :props="props" class="text-center">
                 <q-chip 
                   :color="props.row.status === 'confirmed' ? 'positive' : props.row.status === 'failed' ? 'negative' : 'warning'"
                   text-color="white"
                   size="sm"
+                  :icon="props.row.status === 'confirmed' ? 'check_circle' : props.row.status === 'failed' ? 'error' : 'schedule'"
                 >
                   ${props.row.status}
                 </q-chip>
@@ -212,12 +298,24 @@
             </template>
             
             <template v-slot:body-cell-type="props">
-              <q-td :props="props">
+              <q-td :props="props" class="text-center">
                 <q-badge 
                   :color="props.row.transaction_type === 'flow' ? 'blue' : 'purple'"
                   :label="props.row.transaction_type.toUpperCase()"
                 />
               </q-td>
+            </template>
+            
+            <template v-slot:no-data="{ message }">
+              <div class="full-width row flex-center q-pa-lg">
+                <div class="text-center">
+                  <q-icon name="rocket_launch" size="3em" class="text-orange-5 q-mb-md" />
+                  <div class="text-h6 text-grey-7 q-mb-sm">${message}</div>
+                  <div class="text-caption text-grey-5">
+                    Visit your nearest Lamassu ATM to begin stacking sats automatically
+                  </div>
+                </div>
+              </div>
             </template>
           </q-table>
         </q-card-section>
@@ -227,39 +325,141 @@
   
   <!-- Sidebar -->
   <div class="col-12 col-md-4 col-lg-5 q-gutter-y-md">
+    <!-- Welcome Card -->
+    <q-card class="bg-gradient-to-br" style="background: linear-gradient(135deg, #F3E5F5 0%, #E1F5FE 100%);">
+      <q-card-section>
+        <div class="text-center">
+          <q-icon name="currency_bitcoin" size="3em" class="text-orange-6 q-mb-sm" />
+          <h6 class="text-subtitle1 q-my-none text-orange-8">
+            Bitcoin DCA Dashboard
+          </h6>
+          <p class="text-body2 text-grey-7 q-mb-none">
+            Your automated sat stacking journey with {{SITE_TITLE}}
+          </p>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- Quick Actions -->
     <q-card>
       <q-card-section>
-        <h6 class="text-subtitle1 q-my-none">
-          {{SITE_TITLE}} DCA Client
+        <h6 class="text-subtitle2 q-my-none q-mb-md">
+          Quick Actions
         </h6>
-        <p>
-          Monitor your Dollar Cost Averaging progress and manage your DCA settings.
-        </p>
-      </q-card-section>
-      <q-card-section class="q-pa-none">
-        <q-separator></q-separator>
-        <q-list>
-          <q-expansion-item
-            group="info"
-            icon="account_balance_wallet"
-            label="Quick Stats"
-            :content-inset-level="0.5"
+        <div class="q-gutter-sm">
+          <q-btn 
+            outline 
+            color="orange" 
+            icon="refresh" 
+            label="Refresh Data"
+            @click="refreshAllData()"
+            :loading="loading"
+            class="full-width"
+            size="md"
+          />
+          <q-btn 
+            outline 
+            color="blue" 
+            icon="download" 
+            label="Export History"
+            class="full-width"
+            size="md"
+            disable
           >
-            <q-card-section class="text-caption" v-if="dashboardData">
-              <div class="row">
-                <div class="col-6">DCA Mode:</div>
-                <div class="col-6">${ dashboardData.dca_mode }</div>
-              </div>
-              <div class="row">
-                <div class="col-6">Status:</div>
-                <div class="col-6">${ dashboardData.dca_status }</div>
-              </div>
-              <div class="row" v-if="dashboardData.average_cost_basis > 0">
-                <div class="col-6">Avg Cost:</div>
-                <div class="col-6">${ Math.round(dashboardData.average_cost_basis) } sats/GTQ</div>
-              </div>
-            </q-card-section>
-          </q-expansion-item>
+            <q-tooltip>Export functionality coming soon!</q-tooltip>
+          </q-btn>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- Stacking Milestones -->
+    <q-card v-if="dashboardData">
+      <q-card-section>
+        <h6 class="text-subtitle2 q-my-none q-mb-md">
+          🏆 Stacking Milestones
+        </h6>
+        <q-list dense>
+          <q-item>
+            <q-item-section avatar>
+              <q-icon 
+                :name="dashboardData.total_sats_accumulated >= 10000 ? 'check_circle' : 'radio_button_unchecked'" 
+                :color="dashboardData.total_sats_accumulated >= 10000 ? 'positive' : 'grey-5'"
+              />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-body2">10,000 sats</q-item-label>
+              <q-item-label caption>First milestone 🎯</q-item-label>
+            </q-item-section>
+          </q-item>
+          
+          <q-item>
+            <q-item-section avatar>
+              <q-icon 
+                :name="dashboardData.total_sats_accumulated >= 100000 ? 'check_circle' : 'radio_button_unchecked'" 
+                :color="dashboardData.total_sats_accumulated >= 100000 ? 'positive' : 'grey-5'"
+              />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-body2">100,000 sats</q-item-label>
+              <q-item-label caption>Getting serious 🚀</q-item-label>
+            </q-item-section>
+          </q-item>
+          
+          <q-item>
+            <q-item-section avatar>
+              <q-icon 
+                :name="dashboardData.total_sats_accumulated >= 1000000 ? 'check_circle' : 'radio_button_unchecked'" 
+                :color="dashboardData.total_sats_accumulated >= 1000000 ? 'positive' : 'grey-5'"
+              />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-body2">1,000,000 sats</q-item-label>
+              <q-item-label caption>True HODLer 💎</q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+    </q-card>
+
+    <!-- DCA Tips -->
+    <q-card>
+      <q-card-section>
+        <h6 class="text-subtitle2 q-my-none q-mb-md">
+          💡 DCA Tips
+        </h6>
+        <q-list dense>
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="trending_up" color="orange" size="sm" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-caption">
+                Consistency beats timing - small, regular purchases smooth out volatility
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+          
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="schedule" color="blue" size="sm" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-caption">
+                Time in the market beats timing the market
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+          
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="security" color="green" size="sm" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-caption">
+                Each sat purchased is sovereignty gained
+              </q-item-label>
+            </q-item-section>
+          </q-item>
         </q-list>
       </q-card-section>
     </q-card>

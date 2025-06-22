@@ -70,13 +70,26 @@ async def api_get_client_analytics(
     time_range: str = Query("30d", regex="^(7d|30d|90d|1y|all)$"),
 ) -> ClientAnalytics:
     """Get client performance analytics and cost basis data"""
-    analytics = await get_client_analytics(wallet.wallet.user, time_range)
-    if not analytics:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail="Analytics data not available"
+    try:
+        analytics = await get_client_analytics(wallet.wallet.user, time_range)
+        if not analytics:
+            # Return empty analytics data instead of error
+            return ClientAnalytics(
+                user_id=wallet.wallet.user,
+                cost_basis_history=[],
+                accumulation_timeline=[],
+                transaction_frequency={}
+            )
+        return analytics
+    except Exception as e:
+        print(f"Analytics error: {e}")
+        # Return empty analytics data as fallback
+        return ClientAnalytics(
+            user_id=wallet.wallet.user,
+            cost_basis_history=[],
+            accumulation_timeline=[],
+            transaction_frequency={}
         )
-    return analytics
 
 
 @satmachineclient_api_router.put("/api/v1/dashboard/settings")

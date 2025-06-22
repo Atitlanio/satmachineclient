@@ -270,6 +270,69 @@ window.app = Vue.createApp({
         const costBasisData = this.analyticsData.cost_basis_history || []
         if (costBasisData.length === 0) {
           console.log('No chart data available')
+          // Create gradient for placeholder chart
+          const placeholderGradient = ctx.createLinearGradient(0, 0, 0, 300)
+          placeholderGradient.addColorStop(0, 'rgba(255, 149, 0, 0.3)')
+          placeholderGradient.addColorStop(1, 'rgba(255, 149, 0, 0.05)')
+          
+          // Show placeholder chart
+          this.dcaChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: ['Start Your DCA Journey'],
+              datasets: [{
+                label: 'Total Sats Accumulated',
+                data: [0],
+                borderColor: '#FF9500',
+                backgroundColor: placeholderGradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 8,
+                pointBackgroundColor: '#FFFFFF',
+                pointBorderColor: '#FF9500',
+                pointBorderWidth: 3
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  titleColor: '#FFFFFF',
+                  bodyColor: '#FFFFFF',
+                  borderColor: '#FF9500',
+                  borderWidth: 2,
+                  cornerRadius: 8
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: {
+                    color: '#666666',
+                    font: { size: 12, weight: '500' }
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(255, 149, 0, 0.1)',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    color: '#666666',
+                    font: { size: 12, weight: '500' },
+                    callback: function(value) {
+                      return value.toLocaleString() + ' sats'
+                    }
+                  }
+                }
+              }
+            }
+          })
           return
         }
 
@@ -293,7 +356,17 @@ window.app = Vue.createApp({
         )
 
         const labels = chartData.map(point => {
-          const date = new Date(point.date)
+          // Handle different date formats with improved validation
+          let date;
+          if (point.date) {
+            date = new Date(point.date);
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+              date = new Date();
+            }
+          } else {
+            date = new Date();
+          }
           return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric'
@@ -328,7 +401,13 @@ window.app = Vue.createApp({
 
     createChart(labels, cumulativeSats) {
       const ctx = this.$refs.dcaChart.getContext('2d')
-
+      
+      // Create gradient for the area fill
+      const gradient = ctx.createLinearGradient(0, 0, 0, 300)
+      gradient.addColorStop(0, 'rgba(255, 149, 0, 0.4)')
+      gradient.addColorStop(0.5, 'rgba(255, 149, 0, 0.2)')
+      gradient.addColorStop(1, 'rgba(255, 149, 0, 0.05)')
+      
       this.dcaChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -336,15 +415,19 @@ window.app = Vue.createApp({
           datasets: [{
             label: 'Total Sats Accumulated',
             data: cumulativeSats,
-            borderColor: '#FF9500',  // Bitcoin orange
-            backgroundColor: 'rgba(255, 149, 0, 0.1)',
+            borderColor: '#FF9500',
+            backgroundColor: gradient,
             borderWidth: 3,
             fill: true,
             tension: 0.4,
-            pointBackgroundColor: '#FF9500',
+            pointBackgroundColor: '#FFFFFF',
             pointBorderColor: '#FF9500',
-            pointRadius: 4,
-            pointHoverRadius: 6
+            pointBorderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointHoverBackgroundColor: '#FFFFFF',
+            pointHoverBorderColor: '#FF7700',
+            pointHoverBorderWidth: 4
           }]
         },
         options: {
@@ -352,14 +435,24 @@ window.app = Vue.createApp({
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              display: false  // Hide legend to keep it clean
+              display: false
             },
             tooltip: {
               mode: 'index',
               intersect: false,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: '#FFFFFF',
+              bodyColor: '#FFFFFF',
+              borderColor: '#FF9500',
+              borderWidth: 2,
+              cornerRadius: 8,
+              displayColors: false,
               callbacks: {
+                title: function(context) {
+                  return `📅 ${context[0].label}`
+                },
                 label: function (context) {
-                  return `${context.parsed.y.toLocaleString()} sats`
+                  return `⚡ ${context.parsed.y.toLocaleString()} sats accumulated`
                 }
               }
             }
@@ -369,15 +462,34 @@ window.app = Vue.createApp({
               display: true,
               grid: {
                 display: false
+              },
+              ticks: {
+                color: '#666666',
+                font: {
+                  size: 12,
+                  weight: '500'
+                }
               }
             },
             y: {
               display: true,
+              beginAtZero: true,
               grid: {
-                color: 'rgba(0,0,0,0.1)'
+                color: 'rgba(255, 149, 0, 0.1)',
+                drawBorder: false
               },
               ticks: {
+                color: '#666666',
+                font: {
+                  size: 12,
+                  weight: '500'
+                },
                 callback: function (value) {
+                  if (value >= 1000000) {
+                    return (value / 1000000).toFixed(1) + 'M sats'
+                  } else if (value >= 1000) {
+                    return (value / 1000).toFixed(0) + 'k sats'
+                  }
                   return value.toLocaleString() + ' sats'
                 }
               }
@@ -387,6 +499,11 @@ window.app = Vue.createApp({
             mode: 'nearest',
             axis: 'x',
             intersect: false
+          },
+          elements: {
+            point: {
+              hoverRadius: 8
+            }
           }
         }
       })

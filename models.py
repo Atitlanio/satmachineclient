@@ -11,7 +11,8 @@ class ClientDashboardSummary(BaseModel):
     """Summary metrics for client dashboard overview"""
     user_id: str
     total_sats_accumulated: int
-    total_fiat_invested: int  # In centavos
+    total_fiat_invested: int  # Confirmed deposits
+    pending_fiat_deposits: int  # Pending deposits awaiting confirmation
     average_cost_basis: float  # Average sats per fiat unit
     current_fiat_balance: int  # Available balance for DCA
     total_transactions: int

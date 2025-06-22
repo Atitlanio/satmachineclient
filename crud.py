@@ -99,6 +99,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
         user_id=user_id,
         total_sats_accumulated=total_sats,
         total_fiat_invested=total_invested,  # Sum of confirmed deposits
+        pending_fiat_deposits=pending_deposits,  # Sum of pending deposits
         average_cost_basis=avg_cost_basis,
         current_fiat_balance=remaining_balance,  # Confirmed deposits - DCA spent
         total_transactions=tx_stats["tx_count"] if tx_stats else 0,

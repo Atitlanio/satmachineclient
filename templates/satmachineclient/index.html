@@ -143,30 +143,83 @@
         </q-card-section>
       </q-card>
 
-      <!-- Recent Transactions -->
+      <!-- Transaction History -->
       <q-card>
         <q-card-section>
-          <h6 class="text-subtitle2 q-my-none q-mb-md">Recent Transactions</h6>
-          <div v-if="transactions.length === 0" class="text-grey text-center q-pa-md">
-            No transactions yet
+          <div class="row items-center q-mb-md">
+            <div class="col">
+              <h6 class="text-subtitle2 q-my-none">Transaction History</h6>
+            </div>
+            <div class="col-auto">
+              <q-btn 
+                flat 
+                dense 
+                icon="refresh" 
+                @click="loadTransactions"
+                :loading="loading"
+                size="sm"
+              >
+                Refresh
+              </q-btn>
+            </div>
           </div>
-          <q-list v-else>
-            <q-item v-for="tx in transactions" :key="tx.id">
-              <q-item-section>
-                <q-item-label>${formatSats(tx.amount_sats)}</q-item-label>
-                <q-item-label caption>${formatCurrency(tx.amount_fiat)} • ${formatDate(tx.transaction_time || tx.created_at)}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
+          
+          <q-table
+            :rows="transactions"
+            :columns="transactionColumns"
+            row-key="id"
+            :pagination="transactionPagination"
+            :loading="loading"
+            flat
+            bordered
+            :no-data-label="'No transactions yet - start your DCA journey!'"
+          >
+            <template v-slot:body-cell-amount_sats="props">
+              <q-td :props="props">
+                <div class="text-weight-medium text-orange-8">
+                  ${formatSats(props.row.amount_sats)}
+                </div>
+              </q-td>
+            </template>
+            
+            <template v-slot:body-cell-amount_fiat="props">
+              <q-td :props="props">
+                <div class="text-weight-medium">
+                  ${formatCurrency(props.row.amount_fiat)}
+                </div>
+              </q-td>
+            </template>
+            
+            <template v-slot:body-cell-date="props">
+              <q-td :props="props">
+                <div>${formatDate(props.row.transaction_time || props.row.created_at)}</div>
+                <div class="text-caption text-grey">
+                  ${formatTime(props.row.transaction_time || props.row.created_at)}
+                </div>
+              </q-td>
+            </template>
+            
+            <template v-slot:body-cell-status="props">
+              <q-td :props="props">
                 <q-chip 
-                  :color="tx.status === 'confirmed' ? 'positive' : 'warning'"
+                  :color="props.row.status === 'confirmed' ? 'positive' : props.row.status === 'failed' ? 'negative' : 'warning'"
                   text-color="white"
                   size="sm"
                 >
-                  ${tx.status}
+                  ${props.row.status}
                 </q-chip>
-              </q-item-section>
-            </q-item>
-          </q-list>
+              </q-td>
+            </template>
+            
+            <template v-slot:body-cell-type="props">
+              <q-td :props="props">
+                <q-badge 
+                  :color="props.row.transaction_type === 'flow' ? 'blue' : 'purple'"
+                  :label="props.row.transaction_type.toUpperCase()"
+                />
+              </q-td>
+            </template>
+          </q-table>
         </q-card-section>
       </q-card>
     </div>

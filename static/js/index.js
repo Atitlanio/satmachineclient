@@ -8,7 +8,57 @@ window.app = Vue.createApp({
       transactions: [],
       loading: true,
       error: null,
-      showFiatValues: false  // Hide fiat values by default
+      showFiatValues: false,  // Hide fiat values by default
+      transactionColumns: [
+        {
+          name: 'date',
+          label: 'Date',
+          align: 'left',
+          field: row => row.transaction_time || row.created_at,
+          format: val => val,
+          sortable: true,
+          sort: (a, b, rowA, rowB) => {
+            // Sort by most recent first
+            const dateA = new Date(rowA.transaction_time || rowA.created_at);
+            const dateB = new Date(rowB.transaction_time || rowB.created_at);
+            return dateB - dateA;
+          }
+        },
+        {
+          name: 'amount_sats',
+          label: 'Bitcoin',
+          align: 'right',
+          field: 'amount_sats',
+          sortable: true
+        },
+        {
+          name: 'amount_fiat',
+          label: 'Fiat Amount',
+          align: 'right',
+          field: 'amount_fiat',
+          sortable: true
+        },
+        {
+          name: 'type',
+          label: 'Type',
+          align: 'center',
+          field: 'transaction_type',
+          sortable: true
+        },
+        {
+          name: 'status',
+          label: 'Status',
+          align: 'center',
+          field: 'status',
+          sortable: true
+        }
+      ],
+      transactionPagination: {
+        sortBy: 'date',
+        descending: true,
+        page: 1,
+        rowsPerPage: 10
+      }
     }
   },
 
@@ -41,6 +91,14 @@ window.app = Vue.createApp({
       return new Date(dateString).toLocaleDateString()
     },
 
+    formatTime(dateString) {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    },
+
     formatSats(amount) {
       if (!amount) return '0 sats'
       return new Intl.NumberFormat('en-US').format(amount) + ' sats'
@@ -64,10 +122,15 @@ window.app = Vue.createApp({
       try {
         const {data} = await LNbits.api.request(
           'GET',
-          '/satmachineclient/api/v1/dashboard/transactions?limit=10',
+          '/satmachineclient/api/v1/dashboard/transactions?limit=50',
           this.g.user.wallets[0].inkey
         )
-        this.transactions = data
+        // Sort transactions by most recent first
+        this.transactions = data.sort((a, b) => {
+          const dateA = new Date(a.transaction_time || a.created_at)
+          const dateB = new Date(b.transaction_time || b.created_at)
+          return dateB - dateA
+        })
       } catch (error) {
         console.error('Error loading transactions:', error)
       }

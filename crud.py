@@ -169,7 +169,7 @@ async def get_client_transactions(
     transactions = await db.fetchall(
         f"""
         SELECT id, amount_sats, amount_fiat, exchange_rate, transaction_type, 
-               status, created_at, lamassu_transaction_id
+               status, created_at, transaction_time, lamassu_transaction_id
         FROM satmachineadmin.dca_payments 
         WHERE {where_clause}
         ORDER BY created_at DESC
@@ -187,6 +187,7 @@ async def get_client_transactions(
             transaction_type=tx["transaction_type"],
             status=tx["status"],
             created_at=tx["created_at"],
+            transaction_time=tx["transaction_time"],
             lamassu_transaction_id=tx["lamassu_transaction_id"]
         )
         for tx in transactions

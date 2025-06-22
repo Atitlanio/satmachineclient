@@ -154,7 +154,7 @@
             <q-item v-for="tx in transactions" :key="tx.id">
               <q-item-section>
                 <q-item-label>${formatSats(tx.amount_sats)}</q-item-label>
-                <q-item-label caption>${formatCurrency(tx.amount_fiat)} • ${formatDate(tx.created_at)}</q-item-label>
+                <q-item-label caption>${formatCurrency(tx.amount_fiat)} • ${formatDate(tx.transaction_time || tx.created_at)}</q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-chip 

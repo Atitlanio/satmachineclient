@@ -32,6 +32,7 @@ class ClientTransaction(BaseModel):
     transaction_type: str  # 'flow', 'fixed', 'manual'
     status: str
     created_at: datetime
+    transaction_time: Optional[datetime] = None  # Original ATM transaction time
     lamassu_transaction_id: Optional[str] = None
 
 

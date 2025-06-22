@@ -72,11 +72,11 @@
               <q-card flat class="bg-blue-1">
                 <q-card-section class="text-center">
                   <div class="text-h6 text-blue-8">
-                    ${dashboardData.current_sats_fiat_value > (dashboardData.total_fiat_invested / 100) ? '+' : ''}
-                    ${formatCurrencyWithCode(dashboardData.current_sats_fiat_value - (dashboardData.total_fiat_invested / 100), dashboardData.currency)}
+                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? '+' : ''}
+                    ${formatCurrencyWithCode((dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) - dashboardData.total_fiat_invested, dashboardData.currency)}
                   </div>
                   <div class="text-caption text-blue-7">
-                    ${dashboardData.current_sats_fiat_value > (dashboardData.total_fiat_invested / 100) ? 'Unrealized Gain' : 'Unrealized Loss'}
+                    ${(dashboardData.current_sats_fiat_value + dashboardData.current_fiat_balance) > dashboardData.total_fiat_invested ? 'Unrealized Gain' : 'Unrealized Loss'}
                   </div>
                   <div class="text-caption text-grey">vs total invested</div>
                 </q-card-section>

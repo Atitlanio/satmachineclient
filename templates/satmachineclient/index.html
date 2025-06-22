@@ -1,5 +1,5 @@
 <!--/////////////////////////////////////////////////-->
-<!--//PAGE FOR THE DCA ADMIN EXTENSION IN LNBITS//////-->
+<!--//PAGE FOR THE DCA CLIENT EXTENSION IN LNBITS/////-->
 <!--/////////////////////////////////////////////////-->
 
 {% extends "base.html" %} {% from "macros.jinja" import window_vars with context
@@ -7,6 +7,110 @@
 <script src="{{ static_url_for('satmachineclient/static', path='js/index.js') }}"></script>
 {% endblock %} {% block page %}
 <div class="row q-col-gutter-md" id="dcaClient">
+  <!-- Loading State -->
+  <div v-if="loading" class="col-12">
+    <q-card class="q-pa-md text-center">
+      <q-spinner size="2em" />
+      <div class="q-mt-md">Loading your DCA dashboard...</div>
+    </q-card>
+  </div>
 
+  <!-- Error State -->
+  <div v-if="error && !loading" class="col-12">
+    <q-banner class="bg-negative text-white">
+      <template v-slot:avatar>
+        <q-icon name="error" />
+      </template>
+      ${error}
+    </q-banner>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div v-if="hasData" class="col-12">
+    <!-- Summary Cards -->
+    <div class="row q-col-gutter-md q-mb-lg">
+      <div class="col-12 col-md-3">
+        <q-card class="q-pa-md text-center">
+          <div class="text-h6">${formatSats(dashboardData.total_sats_accumulated)}</div>
+          <div class="text-grey">Total Sats Accumulated</div>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-3">
+        <q-card class="q-pa-md text-center">
+          <div class="text-h6">${formatCurrency(dashboardData.total_fiat_invested)}</div>
+          <div class="text-grey">Total Invested</div>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-3">
+        <q-card class="q-pa-md text-center">
+          <div class="text-h6">${formatCurrency(dashboardData.current_fiat_balance)}</div>
+          <div class="text-grey">Available Balance</div>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-3">
+        <q-card class="q-pa-md text-center">
+          <div class="text-h6">${dashboardData.total_transactions}</div>
+          <div class="text-grey">Total Transactions</div>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- DCA Status -->
+    <div class="row q-col-gutter-md q-mb-lg">
+      <div class="col-12">
+        <q-card class="q-pa-md">
+          <div class="text-h6 q-mb-md">DCA Status</div>
+          <div class="row q-col-gutter-md">
+            <div class="col-6">
+              <div class="text-body2">Mode: <strong>${dashboardData.dca_mode}</strong></div>
+            </div>
+            <div class="col-6">
+              <div class="text-body2">Status: 
+                <q-chip 
+                  :color="dashboardData.dca_status === 'active' ? 'positive' : 'warning'"
+                  text-color="white"
+                  size="sm"
+                >
+                  ${dashboardData.dca_status}
+                </q-chip>
+              </div>
+            </div>
+          </div>
+          <div v-if="dashboardData.average_cost_basis > 0" class="q-mt-md">
+            <div class="text-body2">Average Cost Basis: <strong>${Math.round(dashboardData.average_cost_basis)} sats/GTQ</strong></div>
+          </div>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="row q-col-gutter-md">
+      <div class="col-12">
+        <q-card class="q-pa-md">
+          <div class="text-h6 q-mb-md">Recent Transactions</div>
+          <div v-if="transactions.length === 0" class="text-grey text-center q-pa-md">
+            No transactions yet
+          </div>
+          <q-list v-else>
+            <q-item v-for="tx in transactions" :key="tx.id">
+              <q-item-section>
+                <q-item-label>${formatSats(tx.amount_sats)}</q-item-label>
+                <q-item-label caption>${formatCurrency(tx.amount_fiat)} • ${formatDate(tx.created_at)}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-chip 
+                  :color="tx.status === 'confirmed' ? 'positive' : 'warning'"
+                  text-color="white"
+                  size="sm"
+                >
+                  ${tx.status}
+                </q-chip>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

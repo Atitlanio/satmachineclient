@@ -35,7 +35,7 @@ async def api_get_dashboard_summary(
     wallet: WalletTypeInfo = Depends(require_invoice_key),
 ) -> ClientDashboardSummary:
     """Get client dashboard summary metrics"""
-    summary = await get_client_dashboard_summary(wallet.user)
+    summary = await get_client_dashboard_summary(wallet.wallet.user)
     if not summary:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, 
@@ -55,7 +55,7 @@ async def api_get_client_transactions(
 ) -> List[ClientTransaction]:
     """Get client's DCA transaction history with filtering"""
     return await get_client_transactions(
-        wallet.user, 
+        wallet.wallet.user, 
         limit=limit, 
         offset=offset,
         transaction_type=transaction_type,
@@ -70,7 +70,7 @@ async def api_get_client_analytics(
     time_range: str = Query("30d", regex="^(7d|30d|90d|1y|all)$"),
 ) -> ClientAnalytics:
     """Get client performance analytics and cost basis data"""
-    analytics = await get_client_analytics(wallet.user, time_range)
+    analytics = await get_client_analytics(wallet.wallet.user, time_range)
     if not analytics:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
@@ -85,7 +85,7 @@ async def api_update_client_settings(
     wallet: WalletTypeInfo = Depends(require_invoice_key),
 ) -> dict:
     """Update client DCA settings (mode, limits, status)"""
-    client = await get_client_by_user_id(wallet.user)
+    client = await get_client_by_user_id(wallet.wallet.user)
     if not client:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
@@ -111,7 +111,7 @@ async def api_export_transactions(
 ):
     """Export client transaction history"""
     transactions = await get_client_transactions(
-        wallet.user,
+        wallet.wallet.user,
         limit=10000,  # Large limit for export
         start_date=start_date,
         end_date=end_date

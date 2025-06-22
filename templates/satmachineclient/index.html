@@ -33,26 +33,32 @@
         <q-card-section class="text-center">
           <div class="row items-center">
             <div class="col-12 col-md-8">
-              <div class="text-h4 text-orange-8 q-mb-sm">
+              <div class="text-h4 text-orange-8">
                 ⚡ ${formatSats(dashboardData.total_sats_accumulated)}
-                <q-spinner-gears 
-                  v-if="dashboardData.current_fiat_balance > 0 && dashboardData.dca_status === 'active'"
-                  color="orange-7" 
-                  size="1.2em" 
-                  class="q-ml-sm"
-                />
               </div>
               <div class="text-h6 text-grey-7 q-mb-xs">
-                stacked and growing!
-                <span v-if="dashboardData.current_fiat_balance > 0 && dashboardData.dca_status === 'active'" class="text-orange-7 q-ml-xs">
-                  • actively stacking
-                </span>
+                stacked!
               </div>
               <div class="text-caption text-grey-6">
                 ${dashboardData.total_transactions} DCA ${dashboardData.total_transactions === 1 ? 'purchase' : 'purchases'} • <span class="text-weight-bold text-blue-8">${dashboardData.dca_mode}</span> mode
               </div>
-            </div>
-            <div class="col-12 col-md-4 q-mt-md">
+              <div v-if="dashboardData.current_fiat_balance > 0 && dashboardData.dca_status === 'active'" class="q-mt-xs column items-center">
+                    <div>
+                  <q-spinner-hearts 
+                    color="orange-7" 
+                    size="2.5em"
+                  />
+                  </div>
+                  <q-badge
+                  color="orange-9"
+                  text-color="white"
+                  style="font-size: 11px; padding: 4px 8px; font-weight: bold;"
+                  >
+                      currently stacking
+                  </q-badge>
+                 </div>
+              </div>
+            <div class="col-12 col-md-4">
               <q-circular-progress
                 show-value
                 font-size="12px"
@@ -61,7 +67,7 @@
                 :thickness="0.25"
                 color="orange-7"
                 track-color="orange-1"
-                class="q-ma-md text-orange-8"
+                class="q-mx-md q-ma-md text-orange-8"
               >
                 ${(getMilestoneProgress() || 0).toFixed(2)}%
               </q-circular-progress>

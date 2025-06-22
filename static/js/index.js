@@ -356,10 +356,24 @@ window.app = Vue.createApp({
         )
 
         const labels = chartData.map(point => {
-          // Handle different date formats with improved validation
+          // Handle different date formats with enhanced timezone handling
           let date;
           if (point.date) {
-            date = new Date(point.date);
+            console.log('Raw date from API:', point.date); // Debug the actual date string
+            
+            // If it's an ISO string with timezone info, parse it correctly
+            if (typeof point.date === 'string' && point.date.includes('T')) {
+              // ISO string - parse and convert to local date
+              date = new Date(point.date);
+              // For display purposes, use the date part only to avoid timezone shifts
+              const localDateStr = date.getFullYear() + '-' + 
+                                  String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                  String(date.getDate()).padStart(2, '0');
+              date = new Date(localDateStr + 'T00:00:00'); // Force local midnight
+            } else {
+              date = new Date(point.date);
+            }
+            
             // Check if date is valid
             if (isNaN(date.getTime())) {
               date = new Date();
@@ -367,6 +381,9 @@ window.app = Vue.createApp({
           } else {
             date = new Date();
           }
+          
+          console.log('Formatted date:', date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+          
           return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric'

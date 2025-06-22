@@ -1,11 +1,7 @@
-import asyncio
-
 from fastapi import APIRouter
-from lnbits.tasks import create_permanent_unique_task
 from loguru import logger
 
 from .crud import db
-from .tasks import wait_for_paid_invoices, hourly_transaction_polling
 from .views import satmachineclient_generic_router
 from .views_api import satmachineclient_api_router
 
@@ -28,29 +24,14 @@ satmachineclient_static_files = [
     }
 ]
 
-scheduled_tasks: list[asyncio.Task] = []
-
-
 def satmachineclient_stop():
-    for task in scheduled_tasks:
-        try:
-            task.cancel()
-        except Exception as ex:
-            logger.warning(ex)
+    # No background tasks to stop
+    pass
 
 
 def satmachineclient_start():
-    # Start invoice listener task
-    invoice_task = create_permanent_unique_task(
-        "ext_satmachineclient", wait_for_paid_invoices
-    )
-    scheduled_tasks.append(invoice_task)
-
-    # Start hourly transaction polling task
-    polling_task = create_permanent_unique_task(
-        "ext_satmachineclient_polling", hourly_transaction_polling
-    )
-    scheduled_tasks.append(polling_task)
+    # No background tasks to start - client extension is read-only
+    pass
 
 
 __all__ = [

@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script src="{{ static_url_for('satmachineclient/static', path='js/index.js') }}"></script>
 {% endblock %} {% block page %}
-<div class="row q-col-gutter-md" id="dcaClient">
+<div class="row q-col-gutter-md" id="vue">
   <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
     
     <!-- Loading State -->
@@ -542,49 +542,32 @@
           label="Username (Optional)"
           placeholder="Enter a friendly name"
           hint="How you'd like to be identified in the system"
-        />
+        ></q-input>
 
         <q-select
           filled
           dense
+          emit-value
           v-model="registrationForm.selectedWallet"
-          :options="g.user.wallets"
-          option-label="name"
+          :options="walletOptions"
           label="DCA Wallet *"
           hint="Choose which wallet will receive your Bitcoin DCA purchases"
-        >
-          <template v-slot:option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label>
-                  ${scope.opt.name} (ID: ${scope.opt.id.substring(0, 8)}... • ${Math.round(scope.opt.balance_msat / 1000)} sats)
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
+        ></q-select>
 
         <q-select
           filled
           dense
+          emit-value
           v-model="registrationForm.dca_mode"
           :options="[
-            { label: 'Flow Mode (Recommended)', value: 'flow', description: 'Proportional distribution based on your balance' },
-            { label: 'Fixed Mode', value: 'fixed', description: 'Set daily purchase limits' }
+            { label: 'Flow Mode (Recommended)', value: 'flow' },
+            { label: 'Fixed Mode', value: 'fixed' }
           ]"
           option-label="label"
           option-value="value"
           label="DCA Strategy *"
           hint="Choose how your Bitcoin purchases will be distributed"
-        >
-          <template v-slot:option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label>${scope.opt.label} - ${scope.opt.description}</q-item-label>
-              </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
+        ></q-select>
 
         <q-input
           v-if="registrationForm.dca_mode === 'fixed'"
@@ -598,7 +581,7 @@
           :rules="[
             val => registrationForm.dca_mode !== 'fixed' || (val && val > 0) || 'Daily limit is required for fixed mode'
           ]"
-        />
+        ></q-input>
 
         <q-banner class="bg-blue-1 text-blue-9 q-mt-md">
           <template v-slot:avatar>
@@ -619,8 +602,7 @@
             class="full-width"
             size="lg"
           >
-            <q-icon name="rocket_launch" class="q-mr-sm" />
-            Start My DCA Journey
+            🚀 Start My DCA Journey
           </q-btn>
         </div>
       </q-form>

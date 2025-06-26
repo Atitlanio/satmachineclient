@@ -121,7 +121,7 @@ window.app = Vue.createApp({
         const { data } = await LNbits.api.request(
           'GET',
           '/satmachineclient/api/v1/dashboard/summary',
-          this.g.user.wallets[0].inkey
+          this.g.user.wallets[0].adminkey
         )
         this.dashboardData = data
       } catch (error) {
@@ -135,7 +135,7 @@ window.app = Vue.createApp({
         const { data } = await LNbits.api.request(
           'GET',
           '/satmachineclient/api/v1/dashboard/transactions?limit=50',
-          this.g.user.wallets[0].inkey
+          this.g.user.wallets[0].adminkey
         )
 
         // Debug: Log the first transaction to see date format
@@ -232,7 +232,7 @@ window.app = Vue.createApp({
         const {data} = await LNbits.api.request(
           'GET',
           `/satmachineclient/api/v1/dashboard/analytics?time_range=${this.chartTimeRange}`,
-          this.g.user.wallets[0].inkey
+          this.g.user.wallets[0].adminkey
         )
 
         // Debug: Log analytics data

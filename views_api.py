@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from lnbits.core.models import WalletTypeInfo
-from lnbits.decorators import require_invoice_key
+from lnbits.decorators import require_admin_key
 from starlette.exceptions import HTTPException
 
 from .crud import (
@@ -32,7 +32,7 @@ satmachineclient_api_router = APIRouter()
 
 @satmachineclient_api_router.get("/api/v1/dashboard/summary")
 async def api_get_dashboard_summary(
-    wallet: WalletTypeInfo = Depends(require_invoice_key),
+    wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> ClientDashboardSummary:
     """Get client dashboard summary metrics"""
     summary = await get_client_dashboard_summary(wallet.wallet.user)
@@ -46,7 +46,7 @@ async def api_get_dashboard_summary(
 
 @satmachineclient_api_router.get("/api/v1/dashboard/transactions")
 async def api_get_client_transactions(
-    wallet: WalletTypeInfo = Depends(require_invoice_key),
+    wallet: WalletTypeInfo = Depends(require_admin_key),
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     transaction_type: Optional[str] = Query(None),
@@ -66,7 +66,7 @@ async def api_get_client_transactions(
 
 @satmachineclient_api_router.get("/api/v1/dashboard/analytics")
 async def api_get_client_analytics(
-    wallet: WalletTypeInfo = Depends(require_invoice_key),
+    wallet: WalletTypeInfo = Depends(require_admin_key),
     time_range: str = Query("30d", regex="^(7d|30d|90d|1y|all)$"),
 ) -> ClientAnalytics:
     """Get client performance analytics and cost basis data"""
@@ -95,9 +95,13 @@ async def api_get_client_analytics(
 @satmachineclient_api_router.put("/api/v1/dashboard/settings")
 async def api_update_client_settings(
     settings: UpdateClientSettings,
-    wallet: WalletTypeInfo = Depends(require_invoice_key),
+    wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> dict:
-    """Update client DCA settings (mode, limits, status)"""
+    """Update client DCA settings (mode, limits, status)
+    
+    Security: Users can only modify their own DCA settings.
+    Validated by user_id lookup from wallet.wallet.user.
+    """
     client = await get_client_by_user_id(wallet.wallet.user)
     if not client:
         raise HTTPException(
@@ -117,7 +121,7 @@ async def api_update_client_settings(
 
 @satmachineclient_api_router.get("/api/v1/dashboard/export/transactions")
 async def api_export_transactions(
-    wallet: WalletTypeInfo = Depends(require_invoice_key),
+    wallet: WalletTypeInfo = Depends(require_admin_key),
     format: str = Query("csv", regex="^(csv|json)$"),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),

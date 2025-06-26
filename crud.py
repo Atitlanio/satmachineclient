@@ -15,7 +15,7 @@ from .models import (
 )
 
 # Connect to admin extension's database
-db = Database("ext_satmachineadmin")
+db = Database("ext_satoshimachine")
 
 
 ###################################################
@@ -27,7 +27,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     
     # Get client info
     client = await db.fetchone(
-        "SELECT * FROM satmachineadmin.dca_clients WHERE user_id = :user_id",
+        "SELECT * FROM satoshimachine.dca_clients WHERE user_id = :user_id",
         {"user_id": user_id}
     )
     
@@ -45,7 +45,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     sats_result = await db.fetchone(
         """
         SELECT COALESCE(SUM(amount_sats), 0) as total_sats 
-        FROM satmachineadmin.dca_payments 
+        FROM satoshimachine.dca_payments 
         WHERE client_id = :client_id AND status = 'confirmed'
         """,
         {"client_id": client["id"]}
@@ -55,7 +55,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     deposits_result = await db.fetchone(
         """
         SELECT COALESCE(SUM(amount), 0) as confirmed_deposits
-        FROM satmachineadmin.dca_deposits 
+        FROM satoshimachine.dca_deposits 
         WHERE client_id = :client_id AND status = 'confirmed'
         """,
         {"client_id": client["id"]}
@@ -65,7 +65,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     pending_deposits_result = await db.fetchone(
         """
         SELECT COALESCE(SUM(amount), 0) as pending_deposits
-        FROM satmachineadmin.dca_deposits 
+        FROM satoshimachine.dca_deposits 
         WHERE client_id = :client_id AND status = 'pending'
         """,
         {"client_id": client["id"]}
@@ -75,7 +75,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     dca_spent_result = await db.fetchone(
         """
         SELECT COALESCE(SUM(amount_fiat), 0) as dca_spent
-        FROM satmachineadmin.dca_payments 
+        FROM satoshimachine.dca_payments 
         WHERE client_id = :client_id AND status = 'confirmed'
         """,
         {"client_id": client["id"]}
@@ -87,7 +87,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
         SELECT 
             COUNT(*) as tx_count,
             MAX(created_at) as last_tx_date
-        FROM satmachineadmin.dca_payments 
+        FROM satoshimachine.dca_payments 
         WHERE client_id = :client_id AND status = 'confirmed'
         """,
         {"client_id": client["id"]}
@@ -141,7 +141,7 @@ async def get_client_transactions(
     
     # Get client ID first
     client = await db.fetchone(
-        "SELECT id FROM satmachineadmin.dca_clients WHERE user_id = :user_id",
+        "SELECT id FROM satoshimachine.dca_clients WHERE user_id = :user_id",
         {"user_id": user_id}
     )
     
@@ -170,7 +170,7 @@ async def get_client_transactions(
         f"""
         SELECT id, amount_sats, amount_fiat, exchange_rate, transaction_type, 
                status, created_at, transaction_time, lamassu_transaction_id
-        FROM satmachineadmin.dca_payments 
+        FROM satoshimachine.dca_payments 
         WHERE {where_clause}
         ORDER BY created_at DESC
         LIMIT :limit OFFSET :offset
@@ -202,7 +202,7 @@ async def get_client_analytics(user_id: str, time_range: str = "30d") -> Optiona
         
         # Get client ID
         client = await db.fetchone(
-            "SELECT id FROM satmachineadmin.dca_clients WHERE user_id = :user_id",
+            "SELECT id FROM satoshimachine.dca_clients WHERE user_id = :user_id",
             {"user_id": user_id}
         )
         
@@ -234,7 +234,7 @@ async def get_client_analytics(user_id: str, time_range: str = "30d") -> Optiona
                 exchange_rate,
                 SUM(amount_sats) OVER (ORDER BY COALESCE(transaction_time, created_at)) as cumulative_sats,
                 SUM(amount_fiat) OVER (ORDER BY COALESCE(transaction_time, created_at)) as cumulative_fiat
-            FROM satmachineadmin.dca_payments 
+            FROM satoshimachine.dca_payments 
             WHERE client_id = :client_id 
               AND status = 'confirmed'
               AND COALESCE(transaction_time, created_at) IS NOT NULL
@@ -305,7 +305,7 @@ async def get_client_analytics(user_id: str, time_range: str = "30d") -> Optiona
                 SUM(amount_sats) as daily_sats,
                 SUM(amount_fiat) as daily_fiat,
                 COUNT(*) as daily_transactions
-            FROM satmachineadmin.dca_payments 
+            FROM satoshimachine.dca_payments 
             WHERE client_id = :client_id 
               AND status = 'confirmed'
               AND COALESCE(transaction_time, created_at) IS NOT NULL
@@ -376,7 +376,7 @@ async def get_client_analytics(user_id: str, time_range: str = "30d") -> Optiona
                 AVG(amount_fiat) as avg_fiat_per_tx,
                 MIN(COALESCE(transaction_time, created_at)) as first_tx,
                 MAX(COALESCE(transaction_time, created_at)) as last_tx
-            FROM satmachineadmin.dca_payments 
+            FROM satoshimachine.dca_payments 
             WHERE client_id = :client_id AND status = 'confirmed'
             """,
             {"client_id": client["id"]}
@@ -424,7 +424,7 @@ async def get_client_analytics(user_id: str, time_range: str = "30d") -> Optiona
 async def get_client_by_user_id(user_id: str):
     """Get client record by user_id"""
     return await db.fetchone(
-        "SELECT * FROM satmachineadmin.dca_clients WHERE user_id = :user_id",
+        "SELECT * FROM satoshimachine.dca_clients WHERE user_id = :user_id",
         {"user_id": user_id}
     )
 
@@ -441,7 +441,7 @@ async def update_client_dca_settings(client_id: str, settings: UpdateClientSetti
         update_data["id"] = client_id
         
         await db.execute(
-            f"UPDATE satmachineadmin.dca_clients SET {set_clause} WHERE id = :id",
+            f"UPDATE satoshimachine.dca_clients SET {set_clause} WHERE id = :id",
             update_data
         )
         return True

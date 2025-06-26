@@ -12,6 +12,7 @@ from .models import (
     ClientTransaction,
     ClientAnalytics,
     UpdateClientSettings,
+    ClientRegistrationData,
 )
 
 # Connect to admin extension's database
@@ -447,3 +448,70 @@ async def update_client_dca_settings(client_id: str, settings: UpdateClientSetti
         return True
     except Exception:
         return False
+
+
+###################################################
+############## CLIENT REGISTRATION ###############
+###################################################
+
+async def register_dca_client(user_id: str, wallet_id: str, registration_data: ClientRegistrationData) -> Optional[dict]:
+    """Register a new DCA client - special permission for self-registration"""
+    from lnbits.helpers import urlsafe_short_hash
+    from lnbits.core.crud import get_user
+    
+    try:
+        # Verify user exists and get username
+        user = await get_user(user_id)
+        username = registration_data.username or (user.username if user else f"user_{user_id[:8]}")
+        
+        # Check if client already exists
+        existing_client = await db.fetchone(
+            "SELECT id FROM satoshimachine.dca_clients WHERE user_id = :user_id",
+            {"user_id": user_id}
+        )
+        
+        if existing_client:
+            return {"error": "Client already registered", "client_id": existing_client[0]}
+        
+        # Create new client
+        client_id = urlsafe_short_hash()
+        await db.execute(
+            """
+            INSERT INTO satoshimachine.dca_clients 
+            (id, user_id, wallet_id, username, dca_mode, fixed_mode_daily_limit, status, created_at, updated_at)
+            VALUES (:id, :user_id, :wallet_id, :username, :dca_mode, :fixed_mode_daily_limit, :status, :created_at, :updated_at)
+            """,
+            {
+                "id": client_id,
+                "user_id": user_id,
+                "wallet_id": wallet_id,
+                "username": username,
+                "dca_mode": registration_data.dca_mode,
+                "fixed_mode_daily_limit": registration_data.fixed_mode_daily_limit,
+                "status": "active",
+                "created_at": datetime.now(),
+                "updated_at": datetime.now()
+            }
+        )
+        
+        return {
+            "success": True,
+            "client_id": client_id,
+            "message": f"DCA client registered successfully with {registration_data.dca_mode} mode"
+        }
+        
+    except Exception as e:
+        print(f"Error registering DCA client: {e}")
+        return {"error": f"Registration failed: {str(e)}"}
+
+
+async def get_client_by_user_id(user_id: str) -> Optional[dict]:
+    """Get client by user_id - returns dict instead of model for easier access"""
+    try:
+        client = await db.fetchone(
+            "SELECT * FROM satoshimachine.dca_clients WHERE user_id = :user_id",
+            {"user_id": user_id}
+        )
+        return dict(client) if client else None
+    except Exception:
+        return None

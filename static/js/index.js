@@ -4,6 +4,18 @@ window.app = Vue.createApp({
   delimiters: ['${', '}'],
   data: function () {
     return {
+      // Registration state
+      isRegistered: false,
+      registrationChecked: false,
+      showRegistrationDialog: false,
+      registrationForm: {
+        selectedWallet: null,
+        dca_mode: 'flow',
+        fixed_mode_daily_limit: null,
+        username: ''
+      },
+      
+      // Dashboard state
       dashboardData: null,
       transactions: [],
       loading: true,
@@ -60,6 +72,73 @@ window.app = Vue.createApp({
   },
 
   methods: {
+    // Registration Methods
+    async checkRegistrationStatus() {
+      try {
+        const { data } = await LNbits.api.request(
+          'GET',
+          '/satmachineclient/api/v1/registration-status',
+          this.g.user.wallets[0].adminkey
+        )
+        
+        this.isRegistered = data.is_registered
+        this.registrationChecked = true
+        
+        if (!this.isRegistered) {
+          this.showRegistrationDialog = true
+          // Pre-fill username and default wallet if available
+          this.registrationForm.username = this.g.user.username || ''
+          this.registrationForm.selectedWallet = this.g.user.wallets[0] || null
+        }
+        
+        return data
+      } catch (error) {
+        console.error('Error checking registration status:', error)
+        this.error = 'Failed to check registration status'
+        this.registrationChecked = true
+      }
+    },
+
+    async registerClient() {
+      try {
+        // Prepare registration data similar to the admin test client creation
+        const registrationData = {
+          dca_mode: this.registrationForm.dca_mode,
+          fixed_mode_daily_limit: this.registrationForm.fixed_mode_daily_limit,
+          username: this.registrationForm.username || this.g.user.username || `user_${this.g.user.id.substring(0, 8)}`
+        }
+
+        const { data } = await LNbits.api.request(
+          'POST',
+          '/satmachineclient/api/v1/register',
+          this.registrationForm.selectedWallet.adminkey,
+          registrationData
+        )
+        
+        this.isRegistered = true
+        this.showRegistrationDialog = false
+        
+        this.$q.notify({
+          type: 'positive',
+          message: data.message || 'Successfully registered for DCA!',
+          icon: 'check_circle',
+          position: 'top'
+        })
+        
+        // Load dashboard data after successful registration
+        await this.loadDashboardData()
+        
+      } catch (error) {
+        console.error('Error registering client:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: error.detail || 'Failed to register for DCA',
+          position: 'top'
+        })
+      }
+    },
+
+    // Dashboard Methods
     formatCurrency(amount) {
       if (!amount) return 'Q 0.00';
       // Values are already in full currency units, not centavos
@@ -662,11 +741,18 @@ window.app = Vue.createApp({
   async created() {
     try {
       this.loading = true
-      await Promise.all([
-        this.loadDashboardData(),
-        this.loadTransactions(),
-        this.loadChartData()
-      ])
+      
+      // Check registration status first
+      await this.checkRegistrationStatus()
+      
+      // Only load dashboard data if registered
+      if (this.isRegistered) {
+        await Promise.all([
+          this.loadDashboardData(),
+          this.loadTransactions(),
+          this.loadChartData()
+        ])
+      }
     } catch (error) {
       console.error('Error initializing dashboard:', error)
       this.error = 'Failed to initialize dashboard'
@@ -694,7 +780,7 @@ window.app = Vue.createApp({
 
   computed: {
     hasData() {
-      return this.dashboardData && !this.loading
+      return this.dashboardData && !this.loading && this.isRegistered
     }
   },
 

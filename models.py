@@ -61,3 +61,10 @@ class UpdateClientSettings(BaseModel):
     status: Optional[str] = None  # 'active' or 'inactive'
 
 
+class ClientRegistrationData(BaseModel):
+    """Data for client self-registration"""
+    dca_mode: str = "flow"  # Default to flow mode
+    fixed_mode_daily_limit: Optional[int] = None
+    username: Optional[str] = None
+
+

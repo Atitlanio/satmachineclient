@@ -15,15 +15,67 @@ from .crud import (
     get_client_analytics,
     update_client_dca_settings,
     get_client_by_user_id,
+    register_dca_client,
 )
 from .models import (
     ClientDashboardSummary,
     ClientTransaction,
     ClientAnalytics,
     UpdateClientSettings,
+    ClientRegistrationData,
 )
 
 satmachineclient_api_router = APIRouter()
+
+
+###################################################
+############## CLIENT REGISTRATION ###############
+###################################################
+
+@satmachineclient_api_router.post("/api/v1/register", status_code=HTTPStatus.CREATED)
+async def api_register_client(
+    registration_data: ClientRegistrationData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> dict:
+    """Register a new DCA client
+    
+    Clients can self-register using their wallet admin key.
+    Creates a new client entry in the satoshimachine database.
+    """
+    result = await register_dca_client(
+        wallet.wallet.user, 
+        wallet.wallet.id, 
+        registration_data
+    )
+    
+    if "error" in result:
+        if "already registered" in result["error"]:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail=result["error"]
+            )
+        else:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail=result["error"]
+            )
+    
+    return result
+
+
+@satmachineclient_api_router.get("/api/v1/registration-status")
+async def api_check_registration_status(
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> dict:
+    """Check if user is already registered as a DCA client"""
+    client = await get_client_by_user_id(wallet.wallet.user)
+    
+    return {
+        "is_registered": client is not None,
+        "client_id": client["id"] if client else None,
+        "dca_mode": client["dca_mode"] if client else None,
+        "status": client["status"] if client else None,
+    }
 
 
 ###################################################

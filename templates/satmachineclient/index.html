@@ -11,7 +11,7 @@
   <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
     
     <!-- Loading State -->
-    <q-card v-if="loading">
+    <q-card v-if="loading || !registrationChecked">
       <q-card-section class="text-center">
         <q-spinner size="2em" />
         <div class="q-mt-md">Loading your DCA dashboard...</div>
@@ -26,8 +26,19 @@
       </q-card-section>
     </q-card>
 
+    <!-- Not Registered State -->
+    <q-card v-if="registrationChecked && !isRegistered && !loading" class="bg-orange-1">
+      <q-card-section class="text-center">
+        <q-icon name="account_circle" size="3em" color="orange" />
+        <div class="text-h6 q-mt-md text-orange-8">Welcome to Bitcoin DCA!</div>
+        <div class="text-body2 text-grey-7 q-mt-sm">
+          Please complete your registration to start your Dollar Cost Averaging journey.
+        </div>
+      </q-card-section>
+    </q-card>
+
     <!-- Dashboard Content -->
-    <div v-if="hasData">
+    <div v-if="hasData && isRegistered">
       <!-- Hero Card - Bitcoin Stack Progress -->
       <q-card class="q-mb-md bg-gradient-to-r from-orange-1 to-orange-2" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);">
         <q-card-section class="text-center">
@@ -233,8 +244,8 @@
 
     </div>
 
-    <!-- DCA Performance Chart - Always render to ensure canvas is available -->
-    <q-card class="q-mb-md">
+    <!-- DCA Performance Chart - Only show when registered -->
+    <q-card v-if="isRegistered" class="q-mb-md">
       <q-card-section>
         <h6 class="text-subtitle2 q-my-none q-mb-md">Bitcoin Accumulation Progress</h6>
         <div class="chart-container" style="position: relative; height: 300px;">
@@ -262,7 +273,7 @@
     </q-card>
 
     <!-- Dashboard Content -->
-    <div v-if="hasData">
+    <div v-if="hasData && isRegistered">
 
       <!-- Transaction History -->
       <q-card>
@@ -511,5 +522,107 @@
       </q-card-section>
     </q-card>
   </div>
+
+  <!-- Registration Dialog -->
+  <q-dialog v-model="showRegistrationDialog" persistent position="top">
+    <q-card class="q-pa-lg" style="width: 500px; max-width: 90vw">
+      <div class="text-center q-mb-lg">
+        <q-icon name="account_circle" size="4em" color="orange" />
+        <div class="text-h5 q-mt-md text-orange-8">Welcome to DCA!</div>
+        <div class="text-body2 text-grey-7">Let's set up your Bitcoin Dollar Cost Averaging account</div>
+      </div>
+
+      <q-form @submit="registerClient" class="q-gutter-md">
+        <q-input
+          filled
+          dense
+          v-model.trim="registrationForm.username"
+          label="Username (Optional)"
+          placeholder="Enter a friendly name"
+          hint="How you'd like to be identified in the system"
+        />
+
+        <q-select
+          filled
+          dense
+          v-model="registrationForm.selectedWallet"
+          :options="g.user.wallets"
+          option-label="name"
+          label="DCA Wallet *"
+          hint="Choose which wallet will receive your Bitcoin DCA purchases"
+        >
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                <q-item-label>
+                  ${scope.opt.name} (ID: ${scope.opt.id.substring(0, 8)}... • ${Math.round(scope.opt.balance_msat / 1000)} sats)
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <q-select
+          filled
+          dense
+          v-model="registrationForm.dca_mode"
+          :options="[
+            { label: 'Flow Mode (Recommended)', value: 'flow', description: 'Proportional distribution based on your balance' },
+            { label: 'Fixed Mode', value: 'fixed', description: 'Set daily purchase limits' }
+          ]"
+          option-label="label"
+          option-value="value"
+          label="DCA Strategy *"
+          hint="Choose how your Bitcoin purchases will be distributed"
+        >
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                <q-item-label>${scope.opt.label} - ${scope.opt.description}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <q-input
+          v-if="registrationForm.dca_mode === 'fixed'"
+          filled
+          dense
+          type="number"
+          v-model.number="registrationForm.fixed_mode_daily_limit"
+          label="Daily Limit (GTQ)"
+          placeholder="Enter daily purchase limit in centavos"
+          hint="Maximum amount to purchase per day (in centavos: 1 GTQ = 100 centavos)"
+          :rules="[
+            val => registrationForm.dca_mode !== 'fixed' || (val && val > 0) || 'Daily limit is required for fixed mode'
+          ]"
+        />
+
+        <q-banner class="bg-blue-1 text-blue-9 q-mt-md">
+          <template v-slot:avatar>
+            <q-icon name="info" color="blue" />
+          </template>
+          <div class="text-caption">
+            <strong>Flow Mode:</strong> Your Bitcoin purchases are proportional to your deposit balance.<br>
+            <strong>Fixed Mode:</strong> Set a daily limit for consistent Bitcoin accumulation.
+          </div>
+        </q-banner>
+
+        <div class="row q-mt-lg">
+          <q-btn
+            unelevated
+            color="primary"
+            type="submit"
+            :disable="!registrationForm.selectedWallet || !registrationForm.dca_mode"
+            class="full-width"
+            size="lg"
+          >
+            <q-icon name="rocket_launch" class="q-mr-sm" />
+            Start My DCA Journey
+          </q-btn>
+        </div>
+      </q-form>
+    </q-card>
+  </q-dialog>
 </div>
 {% endblock %}

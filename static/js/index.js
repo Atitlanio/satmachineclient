@@ -195,9 +195,12 @@ window.app = Vue.createApp({
       if (!amount) return '0 sats'
       const formatted = new Intl.NumberFormat('en-US').format(amount)
       // Add some excitement for larger amounts
-      if (amount >= 1000000) return formatted + ' sats 💎'
-      if (amount >= 100000) return formatted + ' sats 🚀'
-      if (amount >= 10000) return formatted + ' sats ⚡'
+      if (amount >= 100000000) return formatted + ' sats 🏆' // Full coiner (1 BTC)
+      if (amount >= 20000000) return formatted + ' sats 👑' // Bitcoin royalty
+      if (amount >= 5000000) return formatted + ' sats 🌟' // Rising star
+      if (amount >= 1000000) return formatted + ' sats 💎' // Diamond hands
+      if (amount >= 100000) return formatted + ' sats 🚀' // Rocket fuel
+      if (amount >= 10000) return formatted + ' sats ⚡' // Lightning
       return formatted + ' sats'
     },
 
@@ -280,7 +283,10 @@ window.app = Vue.createApp({
       if (sats < 500000) return { target: 500000, name: '500k sats' }
       if (sats < 1000000) return { target: 1000000, name: '1M sats' }
       if (sats < 2100000) return { target: 2100000, name: '2.1M sats' }
-      return { target: 21000000, name: '21M sats' }
+      if (sats < 5000000) return { target: 5000000, name: '5M sats' }
+      if (sats < 20000000) return { target: 20000000, name: '20M sats' }
+      if (sats < 100000000) return { target: 100000000, name: '100M sats (1 BTC!)' }
+      return { target: 210000000, name: '210M sats (2.1 BTC)' }
     },
 
     getMilestoneProgress() {

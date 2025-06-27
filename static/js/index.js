@@ -7,12 +7,17 @@ window.app = Vue.createApp({
       // Registration state
       isRegistered: false,
       registrationChecked: false,
-      showRegistrationDialog: false,
       registrationForm: {
         selectedWallet: null,
         dca_mode: 'flow',
         fixed_mode_daily_limit: null,
         username: ''
+      },
+
+      // Admin configuration
+      adminConfig: {
+        max_daily_limit_gtq: 2000,
+        currency: 'GTQ'
       },
 
       // Dashboard state
@@ -72,6 +77,23 @@ window.app = Vue.createApp({
   },
 
   methods: {
+    // Configuration Methods
+    async loadClientLimits() {
+      try {
+        const { data } = await LNbits.api.request(
+          'GET',
+          '/satmachineadmin/api/v1/dca/client-limits'
+          // No authentication required - public endpoint with safe data only
+        )
+
+        this.adminConfig = data
+        console.log('Client limits loaded:', this.adminConfig)
+      } catch (error) {
+        console.error('Error loading client limits:', error)
+        // Keep default values if client limits fail to load
+      }
+    },
+
     // Registration Methods
     async checkRegistrationStatus() {
       try {
@@ -85,9 +107,8 @@ window.app = Vue.createApp({
         this.registrationChecked = true
 
         if (!this.isRegistered) {
-          this.showRegistrationDialog = true
-          // Pre-fill username and default wallet if available
-          this.registrationForm.username = this.g.user.username || ''
+          // Fetch current user info to get the username
+          await this.loadCurrentUser()
           this.registrationForm.selectedWallet = this.g.user.wallets[0]?.id || null
         }
 
@@ -99,13 +120,29 @@ window.app = Vue.createApp({
       }
     },
 
+    async loadCurrentUser() {
+      try {
+        const { data } = await LNbits.api.getAuthenticatedUser()
+        
+        // Set username from API response with priority: display_name > username > email > fallback
+        const username = data.extra?.display_name || data.username || data.email
+        this.registrationForm.username = (username !== null && username !== undefined && username !== '') 
+          ? username 
+          : `user_${this.g.user.id.substring(0, 8)}`
+      } catch (error) {
+        console.error('Error loading current user:', error)
+        // Fallback to generated username
+        this.registrationForm.username = `user_${this.g.user.id.substring(0, 8)}`
+      }
+    },
+
     async registerClient() {
       try {
-        // Prepare registration data similar to the admin test client creation
+        // Prepare registration data using the form's username (already loaded from API)
         const registrationData = {
           dca_mode: this.registrationForm.dca_mode,
           fixed_mode_daily_limit: this.registrationForm.fixed_mode_daily_limit,
-          username: this.registrationForm.username || this.g.user.username || `user_${this.g.user.id.substring(0, 8)}`
+          username: this.registrationForm.username || `user_${this.g.user.id.substring(0, 8)}`
         }
 
         // Find the selected wallet object to get the adminkey
@@ -122,7 +159,6 @@ window.app = Vue.createApp({
         )
 
         this.isRegistered = true
-        this.showRegistrationDialog = false
 
         this.$q.notify({
           type: 'positive',
@@ -754,7 +790,10 @@ window.app = Vue.createApp({
     try {
       this.loading = true
 
-      // Check registration status first
+      // Load client limits first
+      await this.loadClientLimits()
+
+      // Check registration status
       await this.checkRegistrationStatus()
 
       // Only load dashboard data if registered

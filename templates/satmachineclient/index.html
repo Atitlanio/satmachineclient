@@ -21,19 +21,87 @@
     <!-- Error State -->
     <q-card v-if="error && !loading" class="bg-negative text-white">
       <q-card-section>
-        <q-icon name="error" class="q-mr-sm" />
+        <q-icon name="error" class="q-mr-sm"></q-icon>
         ${error}
       </q-card-section>
     </q-card>
 
-    <!-- Not Registered State -->
-    <q-card v-if="registrationChecked && !isRegistered && !loading" class="bg-orange-1">
-      <q-card-section class="text-center">
-        <q-icon name="account_circle" size="3em" color="orange" />
-        <div class="text-h6 q-mt-md text-orange-8">Welcome to Bitcoin DCA!</div>
-        <div class="text-body2 text-grey-7 q-mt-sm">
-          Please complete your registration to start your Dollar Cost Averaging journey.
+    <!-- Registration Form Card -->
+    <q-card v-if="registrationChecked && !isRegistered && !loading" class="q-mb-md">
+      <q-card-section>
+        <div class="text-center q-mb-lg">
+          <div>
+            <q-icon name="account_circle" size="4em" color="orange"></q-icon>
+          </div>
+          <div class="text-h5 q-mt-md text-orange-8">Welcome to DCA!</div>
+          <div class="text-body2 text-grey-7">Let's set up your Bitcoin Dollar Cost Averaging account</div>
         </div>
+
+        <q-form @submit="registerClient" class="q-gutter-md">
+          <q-select
+            filled
+            dense
+            emit-value
+            v-model="registrationForm.selectedWallet"
+            :options="walletOptions"
+            label="DCA Wallet *"
+            hint="Choose which wallet will receive your Bitcoin DCA purchases"
+          ></q-select>
+
+          <q-select
+            filled
+            dense
+            emit-value
+            v-model="registrationForm.dca_mode"
+            :options="[
+              { label: 'Flow Mode (Recommended)', value: 'flow' },
+              { label: 'Fixed Mode', value: 'fixed' }
+            ]"
+            option-label="label"
+            option-value="value"
+            label="DCA Strategy *"
+            hint="Choose how your Bitcoin purchases will be distributed"
+          ></q-select>
+
+          <q-input
+            v-if="registrationForm.dca_mode === 'fixed'"
+            filled
+            dense
+            type="number"
+            v-model.number="registrationForm.fixed_mode_daily_limit"
+            label="Daily Limit (GTQ)"
+            placeholder="Enter daily purchase limit"
+            :hint="`Maximum amount to purchase per day (Admin limit: ${adminConfig.max_daily_limit_gtq} GTQ)`"
+            :rules="[
+              val => registrationForm.dca_mode !== 'fixed' || (val && val > 0) || 'Daily limit is required for fixed mode',
+              val => registrationForm.dca_mode !== 'fixed' || val <= adminConfig.max_daily_limit_gtq || `Daily limit cannot exceed ${adminConfig.max_daily_limit_gtq} GTQ (admin maximum)`
+            ]"
+          ></q-input>
+
+          <q-banner class="bg-blue-1 text-blue-9 q-mt-md">
+            <template v-slot:avatar>
+              <q-icon name="info" color="blue"></q-icon>
+            </template>
+            <div class="text-caption">
+              <strong>Flow Mode:</strong> Your Bitcoin purchases come at 0% fee when people cash ou at the machine.<br>
+              <strong>Fixed Mode:</strong> Set a daily limit for consistent Bitcoin accumulation.
+            </div>
+          </q-banner>
+
+          <div class="row q-mt-lg">
+            <q-btn
+              unelevated
+              color="primary"
+              type="submit"
+              :disable="!registrationForm.selectedWallet || !registrationForm.dca_mode"
+              class="full-width"
+              size="lg"
+            >
+              <q-icon name="flash_on" class="q-mr-sm"></q-icon>
+              Start My DCA Journey 🚀
+            </q-btn>
+          </div>
+        </q-form>
       </q-card-section>
     </q-card>
 
@@ -179,7 +247,7 @@
           <div v-if="dashboardData.pending_fiat_deposits > 0" class="q-mt-md">
             <q-banner rounded class="bg-orange-1 text-orange-9">
               <template v-slot:avatar>
-                <q-icon name="schedule" color="orange" size="md" />
+                <q-icon name="schedule" color="orange" size="md"></q-icon>
               </template>
               <div class="text-subtitle2">
                 ⏳ <strong>${formatCurrency(dashboardData.pending_fiat_deposits)}</strong> ready to DCA
@@ -363,7 +431,7 @@
             <template v-slot:no-data="{ message }">
               <div class="full-width row flex-center q-pa-lg">
                 <div class="text-center">
-                  <q-icon name="rocket_launch" size="3em" class="text-orange-5 q-mb-md" />
+                  <q-icon name="rocket_launch" size="3em" class="text-orange-5 q-mb-md"></q-icon>
                   <div class="text-h6 text-grey-7 q-mb-sm">${message}</div>
                   <div class="text-caption text-grey-5">
                     Visit your nearest Lamassu ATM to begin stacking sats automatically
@@ -556,90 +624,5 @@
     </q-card>
   </div>
 
-  <!-- Registration Dialog -->
-  <q-dialog v-model="showRegistrationDialog" persistent position="top">
-    <q-card class="q-pa-lg" style="width: 500px; max-width: 90vw">
-      <div class="text-center q-mb-lg">
-        <div>
-          <q-icon name="account_circle" size="4em" color="orange" />
-        </div>
-        <div class="text-h5 q-mt-md text-orange-8">Welcome to DCA!</div>
-        <div class="text-body2 text-grey-7">Let's set up your Bitcoin Dollar Cost Averaging account</div>
-      </div>
-
-      <q-form @submit="registerClient" class="q-gutter-md">
-        <q-input
-          filled
-          dense
-          v-model.trim="registrationForm.username"
-          label="Username (Optional)"
-          placeholder="Enter a friendly name"
-          hint="How you'd like to be identified in the system"
-        ></q-input>
-
-        <q-select
-          filled
-          dense
-          emit-value
-          v-model="registrationForm.selectedWallet"
-          :options="walletOptions"
-          label="DCA Wallet *"
-          hint="Choose which wallet will receive your Bitcoin DCA purchases"
-        ></q-select>
-
-        <q-select
-          filled
-          dense
-          emit-value
-          v-model="registrationForm.dca_mode"
-          :options="[
-            { label: 'Flow Mode (Recommended)', value: 'flow' },
-            { label: 'Fixed Mode', value: 'fixed' }
-          ]"
-          option-label="label"
-          option-value="value"
-          label="DCA Strategy *"
-          hint="Choose how your Bitcoin purchases will be distributed"
-        ></q-select>
-
-        <q-input
-          v-if="registrationForm.dca_mode === 'fixed'"
-          filled
-          dense
-          type="number"
-          v-model.number="registrationForm.fixed_mode_daily_limit"
-          label="Daily Limit (GTQ)"
-          placeholder="Enter daily purchase limit in centavos"
-          hint="Maximum amount to purchase per day (in centavos: 1 GTQ = 100 centavos)"
-          :rules="[
-            val => registrationForm.dca_mode !== 'fixed' || (val && val > 0) || 'Daily limit is required for fixed mode'
-          ]"
-        ></q-input>
-
-        <q-banner class="bg-blue-1 text-blue-9 q-mt-md">
-          <template v-slot:avatar>
-            <q-icon name="info" color="blue" />
-          </template>
-          <div class="text-caption">
-            <strong>Flow Mode:</strong> Your Bitcoin purchases come at 0% fee when people cash ou at the machine.<br>
-            <strong>Fixed Mode:</strong> Set a daily limit for consistent Bitcoin accumulation.
-          </div>
-        </q-banner>
-
-        <div class="row q-mt-lg">
-          <q-btn
-            unelevated
-            color="primary"
-            type="submit"
-            :disable="!registrationForm.selectedWallet || !registrationForm.dca_mode"
-            class="full-width"
-            size="lg"
-          >
-            🚀 Start My DCA Journey
-          </q-btn>
-        </div>
-      </q-form>
-    </q-card>
-  </q-dialog>
 </div>
 {% endblock %}

@@ -214,3 +214,7 @@ async def api_export_transactions(
         )
     else:
         return {"transactions": transactions}
+
+
+# Removed local client-limits endpoint
+# Client should call admin extension's public endpoint directly

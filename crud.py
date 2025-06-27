@@ -515,3 +515,7 @@ async def get_client_by_user_id(user_id: str) -> Optional[dict]:
         return dict(client) if client else None
     except Exception:
         return None
+
+
+# Removed get_active_lamassu_config - client should not access sensitive admin config
+# Client limits are now fetched via secure public API endpoint

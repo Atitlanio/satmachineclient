@@ -230,13 +230,16 @@ window.app = Vue.createApp({
     formatSats(amount) {
       if (!amount) return '0 sats'
       const formatted = new Intl.NumberFormat('en-US').format(amount)
-      // Add some excitement for larger amounts
+      // Add some excitement for larger amounts with consistent 5x→2x progression
       if (amount >= 100000000) return formatted + ' sats 🏆' // Full coiner (1 BTC)
-      if (amount >= 20000000) return formatted + ' sats 👑' // Bitcoin royalty
-      if (amount >= 5000000) return formatted + ' sats 🌟' // Rising star
-      if (amount >= 1000000) return formatted + ' sats 💎' // Diamond hands
-      if (amount >= 100000) return formatted + ' sats 🚀' // Rocket fuel
-      if (amount >= 10000) return formatted + ' sats ⚡' // Lightning
+      if (amount >= 50000000) return formatted + ' sats 🎆' // Bitcoin baron
+      if (amount >= 10000000) return formatted + ' sats 👑' // Bitcoin royalty
+      if (amount >= 5000000) return formatted + ' sats 🏆' // Verified bag holder
+      if (amount >= 1000000) return formatted + ' sats 🌟' // Millionaire
+      if (amount >= 500000) return formatted + ' sats 🔥' // Half million
+      if (amount >= 100000) return formatted + ' sats 🚀' // Getting serious
+      if (amount >= 50000) return formatted + ' sats ⚡' // Lightning quick
+      if (amount >= 10000) return formatted + ' sats 🎯' // First milestone
       return formatted + ' sats'
     },
 
@@ -311,18 +314,20 @@ window.app = Vue.createApp({
     },
 
     getNextMilestone() {
-      if (!this.dashboardData) return { target: 100000, name: '100k sats' }
+      if (!this.dashboardData) return { target: 10000, name: '10k sats' }
       const sats = this.dashboardData.total_sats_accumulated
 
+      // Consistent 5x→2x progression pattern
       if (sats < 10000) return { target: 10000, name: '10k sats' }
+      if (sats < 50000) return { target: 50000, name: '50k sats' }
       if (sats < 100000) return { target: 100000, name: '100k sats' }
       if (sats < 500000) return { target: 500000, name: '500k sats' }
       if (sats < 1000000) return { target: 1000000, name: '1M sats' }
-      if (sats < 2100000) return { target: 2100000, name: '2.1M sats' }
       if (sats < 5000000) return { target: 5000000, name: '5M sats' }
-      if (sats < 20000000) return { target: 20000000, name: '20M sats' }
+      if (sats < 10000000) return { target: 10000000, name: '10M sats' }
+      if (sats < 50000000) return { target: 50000000, name: '50M sats' }
       if (sats < 100000000) return { target: 100000000, name: '100M sats (1 BTC!)' }
-      return { target: 210000000, name: '210M sats (2.1 BTC)' }
+      return { target: 500000000, name: '500M sats (5 BTC)' }
     },
 
     getMilestoneProgress() {

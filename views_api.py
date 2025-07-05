@@ -199,7 +199,7 @@ async def api_export_transactions(
             writer.writerow([
                 tx.created_at.isoformat(),
                 tx.amount_sats,
-                tx.amount_fiat,  # Values are already in full currency units
+                tx.amount_fiat / 100,  # Convert centavos to GTQ for CSV export
                 tx.exchange_rate,
                 tx.transaction_type,
                 tx.status

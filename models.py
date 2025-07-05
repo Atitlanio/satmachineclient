@@ -11,11 +11,11 @@ class ClientDashboardSummary(BaseModel):
     """Summary metrics for client dashboard overview"""
     user_id: str
     total_sats_accumulated: int
-    total_fiat_invested: int  # Confirmed deposits
-    pending_fiat_deposits: int  # Pending deposits awaiting confirmation
-    current_sats_fiat_value: float  # Current fiat value of total sats
+    total_fiat_invested: int  # Confirmed deposits (in centavos)
+    pending_fiat_deposits: int  # Pending deposits awaiting confirmation (in centavos)
+    current_sats_fiat_value: float  # Current fiat value of total sats (in centavos)
     average_cost_basis: float  # Average sats per fiat unit
-    current_fiat_balance: int  # Available balance for DCA
+    current_fiat_balance: int  # Available balance for DCA (in centavos)
     total_transactions: int
     dca_mode: str  # 'flow' or 'fixed'
     dca_status: str  # 'active' or 'inactive'
@@ -27,7 +27,7 @@ class ClientTransaction(BaseModel):
     """Read-only view of client's DCA transactions"""
     id: str
     amount_sats: int
-    amount_fiat: int
+    amount_fiat: int  # Stored in centavos (GTQ * 100) for precision
     exchange_rate: float
     transaction_type: str  # 'flow', 'fixed', 'manual'
     status: str

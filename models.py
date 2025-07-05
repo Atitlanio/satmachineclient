@@ -6,9 +6,39 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
-# Client Dashboard Data Models
+# API Models for Client Dashboard (Frontend communication in GTQ)
+class ClientDashboardSummaryAPI(BaseModel):
+    """API model - client dashboard summary in GTQ"""
+    user_id: str
+    total_sats_accumulated: int
+    total_fiat_invested_gtq: float  # Confirmed deposits in GTQ
+    pending_fiat_deposits_gtq: float  # Pending deposits in GTQ
+    current_sats_fiat_value_gtq: float  # Current fiat value of total sats in GTQ
+    average_cost_basis: float  # Average sats per GTQ
+    current_fiat_balance_gtq: float  # Available balance for DCA in GTQ
+    total_transactions: int
+    dca_mode: str  # 'flow' or 'fixed'
+    dca_status: str  # 'active' or 'inactive'
+    last_transaction_date: Optional[datetime]
+    currency: str = "GTQ"
+
+
+class ClientTransactionAPI(BaseModel):
+    """API model - client transaction in GTQ"""
+    id: str
+    amount_sats: int
+    amount_fiat_gtq: float  # Amount in GTQ
+    exchange_rate: float
+    transaction_type: str  # 'flow', 'fixed', 'manual'
+    status: str
+    created_at: datetime
+    transaction_time: Optional[datetime] = None  # Original ATM transaction time
+    lamassu_transaction_id: Optional[str] = None
+
+
+# Internal Models for Client Dashboard (Database storage in centavos)
 class ClientDashboardSummary(BaseModel):
-    """Summary metrics for client dashboard overview"""
+    """Internal model - client dashboard summary stored in centavos"""
     user_id: str
     total_sats_accumulated: int
     total_fiat_invested: int  # Confirmed deposits (in centavos)
@@ -24,7 +54,7 @@ class ClientDashboardSummary(BaseModel):
 
 
 class ClientTransaction(BaseModel):
-    """Read-only view of client's DCA transactions"""
+    """Internal model - client transaction stored in centavos"""
     id: str
     amount_sats: int
     amount_fiat: int  # Stored in centavos (GTQ * 100) for precision

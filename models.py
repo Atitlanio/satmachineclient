@@ -36,16 +36,16 @@ class ClientTransactionAPI(BaseModel):
     lamassu_transaction_id: Optional[str] = None
 
 
-# Internal Models for Client Dashboard (Database storage in centavos)
+# Internal Models for Client Dashboard (Database storage in GTQ)
 class ClientDashboardSummary(BaseModel):
-    """Internal model - client dashboard summary stored in centavos"""
+    """Internal model - client dashboard summary stored in GTQ"""
     user_id: str
     total_sats_accumulated: int
-    total_fiat_invested: int  # Confirmed deposits (in centavos)
-    pending_fiat_deposits: int  # Pending deposits awaiting confirmation (in centavos)
-    current_sats_fiat_value: float  # Current fiat value of total sats (in centavos)
-    average_cost_basis: float  # Average sats per fiat unit
-    current_fiat_balance: int  # Available balance for DCA (in centavos)
+    total_fiat_invested: float  # Confirmed deposits in GTQ
+    pending_fiat_deposits: float  # Pending deposits awaiting confirmation in GTQ
+    current_sats_fiat_value: float  # Current fiat value of total sats in GTQ
+    average_cost_basis: float  # Average sats per GTQ
+    current_fiat_balance: float  # Available balance for DCA in GTQ
     total_transactions: int
     dca_mode: str  # 'flow' or 'fixed'
     dca_status: str  # 'active' or 'inactive'
@@ -54,10 +54,10 @@ class ClientDashboardSummary(BaseModel):
 
 
 class ClientTransaction(BaseModel):
-    """Internal model - client transaction stored in centavos"""
+    """Internal model - client transaction stored in GTQ"""
     id: str
     amount_sats: int
-    amount_fiat: int  # Stored in centavos (GTQ * 100) for precision
+    amount_fiat: float  # Amount in GTQ (e.g., 150.75)
     exchange_rate: float
     transaction_type: str  # 'flow', 'fixed', 'manual'
     status: str

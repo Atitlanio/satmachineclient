@@ -183,8 +183,8 @@ window.app = Vue.createApp({
     // Dashboard Methods
     formatCurrency(amount) {
       if (!amount) return 'Q 0.00';
-      // Convert centavos to GTQ (divide by 100) for display
-      const gtqAmount = amount / 100;
+      // Amount is already in GTQ
+      const gtqAmount = amount;
       return new Intl.NumberFormat('es-GT', {
         style: 'currency',
         currency: 'GTQ',
@@ -193,8 +193,8 @@ window.app = Vue.createApp({
 
     formatCurrencyWithCode(amount, currencyCode) {
       if (!amount) return `${currencyCode} 0.00`;
-      // Convert centavos to currency units (divide by 100) for display
-      const currencyAmount = amount / 100;
+      // Amount is already in GTQ
+      const currencyAmount = amount;
       try {
         return new Intl.NumberFormat('en-US', {
           style: 'currency',

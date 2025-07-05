@@ -103,7 +103,7 @@ async def get_client_dashboard_summary(user_id: str) -> Optional[ClientDashboard
     # Calculate metrics
     total_invested = confirmed_deposits  # Total invested = all confirmed deposits
     remaining_balance = confirmed_deposits - dca_spent  # Remaining = deposits - DCA spending
-    avg_cost_basis = total_sats / dca_spent if dca_spent > 0 else 0  # Cost basis = sats / fiat spent
+    avg_cost_basis = total_sats / (dca_spent / 100) if dca_spent > 0 else 0  # Cost basis = sats / GTQ (convert centavos to GTQ)
     
     # Calculate current fiat value of total sats
     current_sats_fiat_value = 0.0
@@ -248,7 +248,7 @@ async def get_client_analytics(user_id: str, time_range: str = "30d") -> Optiona
         # Build cost basis history
         cost_basis_history = []
         for record in cost_basis_data:
-            avg_cost_basis = record["cumulative_sats"] / record["cumulative_fiat"] if record["cumulative_fiat"] > 0 else 0
+            avg_cost_basis = record["cumulative_sats"] / (record["cumulative_fiat"] / 100) if record["cumulative_fiat"] > 0 else 0  # Convert centavos to GTQ
             # Use transaction_date (which is COALESCE(transaction_time, created_at))
             date_to_use = record["transaction_date"]
             if date_to_use is None:
